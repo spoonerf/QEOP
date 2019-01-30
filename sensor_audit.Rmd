@@ -1,0 +1,164 @@
+---
+title: "QEOP Sensor Audit"
+author: "Fiona Spooner"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(fig.width=12, fig.height=8, fig.path='Figs/',
+                     warning=FALSE, message=FALSE)
+```
+
+Libraries required:
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(here)
+library(reader)
+library(knitr)
+```
+
+Reading in the data from the CE Tools Server:
+
+```{r}
+
+dump<-read.table("qeop_dump_all.csv", fill=T, sep=",")
+
+##adding in a column to identify each row with a sensor
+
+dump$sensor<-NA
+for (i in 1:15){
+  start_id<-min(which(grepl( paste("qeop_batstore_",i, sep=""),dump[,1])))
+  end_id<-max(which(grepl( paste("qeop_batstore_",i, sep=""),dump[,1])))
+  dump[start_id:end_id,]$sensor<-paste("Sensor_",i,sep="")
+  #print(i)
+}
+
+table(dump$sensor)
+
+
+```
+
+Removing redundant rows and the classification data as it is not relevant here:
+
+```{r}
+dump<-dump[,c(1,2,4,ncol(dump))]
+dump<-dump[grepl("\t",dump[,1]),]
+dump[,1]<-as.numeric(gsub("[\t(]","",dump[,1]))
+dump[,3]<-as.numeric(gsub("[^0-9.]", "",  dump[,3]))
+
+dump$sensor_no<-as.numeric(gsub("[^0-9.]", "",  dump$sensor))
+
+colnames(dump)<-c("ID", "datetime", "prob_bat", "sensor", "sensor_no")
+
+dump$datetime<-as.POSIXct(dump$datetime,format="%Y-%m-%d %H:%M:%S")
+
+dump$date<- as.Date(dump$datetime)
+
+dump$time<- format(dump$datetime, "%H:%M:%S")
+
+```
+
+
+Calculating the number of detections per day for each sensor:
+
+```{r}
+
+days_active<-dump %>%
+  select(date, sensor_no)%>%
+  group_by(date,sensor_no)%>%
+  mutate(count = n())%>%
+  distinct()%>%
+  ungroup()
+
+days_active$sensor_no<-as.factor(days_active$sensor_no)
+days_active$server<-"CE Tools"
+
+
+```
+
+
+Reading in the OpenSensors data, counting the number of rows in each file. Each row is a detection: 
+
+```{r}
+
+
+lf<-list.files(paste(here(),"/opensensors_Daniyar/qeoplogs", sep=""))
+
+sensor_count<-function(file, dir_id){
+  
+  sensor_no<-as.numeric(gsub("[^0-9.]", "",  file))
+  count<-file.nrow(paste(here(), "/opensensors_Daniyar/qeoplogs/", dir_id,"/", file,sep=""))
+  out<-data.frame(dir_id,sensor_no, count)
+  return(out)
+  }
+
+dir_count<-function(dir_id){
+  
+  files<-list.files(paste(here(), "/opensensors_Daniyar/qeoplogs/", dir_id, sep=""))
+  dir_out<-lapply(files, sensor_count, dir_id = dir_id)
+  do.call("rbind", dir_out)
+}
+
+opensensors<-lapply(lf, dir_count)
+
+open_df<-do.call("rbind", opensensors)
+colnames(open_df)[1]<-"date"
+
+open_df$server<-"Opensensors"
+
+open_df$date<-as.Date(open_df$date)
+open_df$sensor_no<-as.numeric(open_df$sensor_no)
+
+```
+
+Combining data from CE Tools and OpenSensors:
+
+```{r}
+
+all_sensors<-rbind(open_df, days_active)
+
+min_date<-min(all_sensors$date)
+max_date<-max(all_sensors$date)
+
+all_dates<-seq(min_date, max_date, by="day")
+all_df<-data.frame(rep(all_dates,15),rep(1:15, each = length(all_dates))) 
+colnames(all_df)<-c("date", "sensor_no")
+
+all_sensors_merge<-merge(all_df, all_sensors, all=T)
+all_sensors_merge$sensor_no<-as.numeric(all_sensors_merge$sensor_no)
+
+```
+
+Plot of each sensor from `r min_date` to `r max_date`, the height of each row relates to the number of detections in each day:
+
+```{r}
+ggplot(all_sensors_merge, aes(x = date, y = sensor_no, group = sensor_no))+
+  geom_line(aes(size = log10(count), col= server))+
+  scale_y_reverse(breaks = seq(1, 16, by = 1))+
+  scale_x_date(date_breaks = "1 month", date_labels = "%m-%Y")+
+  theme_bw()+
+  theme(axis.text.y = element_text(lineheight = 0.5 , size = 18),
+        axis.text.x = element_text(size = 14, angle = 45, hjust = 1),
+        axis.title.x = element_text(size = 20),
+        axis.title.y = element_text(size = 20),
+        legend.text=element_text(size=18),
+        legend.title=element_text(size=20))+
+  labs(x = "Date", y = "Sensor No.", linetype = "test")+
+  guides(colour = "none", size = guide_legend(title ="Detections\n(Log)"))
+
+```
+
+
+Tabular summary of the same data:
+
+```{r}
+kable(
+  all_sensors_merge %>%
+  group_by(sensor_no, server) %>%
+  filter(!is.na(count))%>%
+  summarise(first_date = min(date), last_date = max(date)))
+
+```
