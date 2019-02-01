@@ -18,6 +18,7 @@ library(dplyr)
 library(here)
 library(reader)
 library(knitr)
+library(anytime)
 ```
 
 Reading in the data from the CE Tools Server:
@@ -79,25 +80,85 @@ days_active$server<-"CE Tools"
 
 ```
 
+Most of the daily data are saved in individual folders, data between 24th October 2017 and 9th May 2018 are grouped together into 6 folders. This code creates new folders for each date between 24th Oct and 9th May
+
+```{r}
+lf<-list.files(paste(here(),"/data_archive/opensensors_Daniyar/qeoplogs_more", sep=""))
+
+#subsetting folders with more than 10 chars
+lf_gr<-lf[nchar(lf)>10]
+
+#create dirs for all the missing dates - need to check which days are missing within this
+fol_ds<-as.Date(unlist(strsplit(lf_gr, "_")))
+mdays<-seq(min(fol_ds), max(fol_ds),by="days")
+
+```
+
+```{r, message=FALSE, eval=FALSE}
+dir_maker<-function(mday){
+  
+  if (!dir.exists(paste(here(),"/data_archive/opensensors_Daniyar/qeoplogs_more/",mday, sep=""))){
+    dir.create(path = paste(here(),"/data_archive/opensensors_Daniyar/qeoplogs_more/",mday, sep=""))
+  }
+    }
+lapply(mdays, dir_maker)
+
+```  
+
+This code breaks up the .csv files by date and sensor, saves a file for each sensor within each date folder
+
+```{r, eval=FALSE}
+
+
+fold_split<-function(fol_name){
+  
+  fp<-paste(here(),"/data_archive/opensensors_Daniyar/qeoplogs_more/", fol_name, sep="" )
+  fpl<-list.files(fp)
+  lapply(fpl, file_split, fp = fp)
+}
+
+file_split<-function(file_name, fp){
+  
+  sensor_no<-as.numeric(gsub("[^0-9.]", "",  file_name))
+  spl_csv<-read.csv(paste(fp,"/",file_name, sep=""))
+  spl_csv$datetime<-anytime(spl_csv$timestamp/1000)#have to divide by 1000 as the numbers are stored to capture milliseconds
+  spl_csv$date<-anydate(spl_csv$timestamp/1000)#have to divide by 1000 as the numbers are stored to capture milliseconds
+  sp_df<-split(spl_csv, spl_csv$date)
+  lapply(names(sp_df),function(x){write.csv(sp_df[[x]],file = paste(here(),"/data_archive/opensensors_Daniyar/qeoplogs_more/", sp_df[[x]]$date[1],"/","bat",sensor_no, ".csv", sep="" ),row.names = FALSE)})
+  
+}
+
+lapply(lf_gr, fold_split)
+
+
+
+
+```
 
 Reading in the OpenSensors data, counting the number of rows in each file. Each row is a detection: 
+
 
 ```{r}
 
 
-lf<-list.files(paste(here(),"/opensensors_Daniyar/qeoplogs", sep=""))
 
 sensor_count<-function(file, dir_id){
   
   sensor_no<-as.numeric(gsub("[^0-9.]", "",  file))
-  count<-file.nrow(paste(here(), "/opensensors_Daniyar/qeoplogs/", dir_id,"/", file,sep=""))
+  count<-file.nrow(paste(here(), "/data_archive/opensensors_Daniyar/qeoplogs_more/", dir_id,"/", file,sep="")) #gives warning
+  #count<-length(readr::count_fields(paste(here(), "/data_archive/opensensors_Daniyar/qeoplogs_more/", dir_id,"/", file,sep=""), tokenizer = readr::tokenizer_csv()))
+
+  #remove file header if the file is a csv
+  if (grepl("*csv", file)){
+    count<-count - 1
+  }
+
   out<-data.frame(dir_id,sensor_no, count)
   return(out)
   }
 
 dir_count<-function(dir_id){
-  
-  files<-list.files(paste(here(), "/opensensors_Daniyar/qeoplogs/", dir_id, sep=""))
+  files<-list.files(paste(here(), "/data_archive/opensensors_Daniyar/qeoplogs_more/", dir_id, sep=""))
   dir_out<-lapply(files, sensor_count, dir_id = dir_id)
   do.call("rbind", dir_out)
 }
@@ -150,6 +211,27 @@ ggplot(all_sensors_merge, aes(x = date, y = sensor_no, group = sensor_no))+
   guides(colour = "none", size = guide_legend(title ="Detections\n(Log)"))
 
 ```
+
+
+
+```{r, eval = FALSE, echo = FALSE}
+ggplot(all_sensors_merge, aes(x = date, y = sensor_no, group = sensor_no))+
+  geom_line(aes(size = count, col= server))+
+  scale_y_reverse(breaks = seq(1, 16, by = 1))+
+  scale_x_date(date_breaks = "1 month", date_labels = "%m-%Y")+
+  theme_bw()+
+  theme(axis.text.y = element_text(lineheight = 0.5 , size = 18),
+        axis.text.x = element_text(size = 14, angle = 45, hjust = 1),
+        axis.title.x = element_text(size = 20),
+        axis.title.y = element_text(size = 20),
+        legend.text=element_text(size=18),
+        legend.title=element_text(size=20))+
+  labs(x = "Date", y = "Sensor No.", linetype = "test")+
+  guides(colour = "none", size = guide_legend(title ="Detections\n(Log)"))
+
+```
+
+
 
 
 Tabular summary of the same data:
