@@ -66,9 +66,10 @@ dump$time<- format(dump$datetime, "%H:%M:%S")
 Calculating the number of detections per day for each sensor:
 
 ```{r}
+library(dplyr)
 
 days_active<-dump %>%
-  select(date, sensor_no)%>%
+  dplyr::select(date, sensor_no)%>%
   group_by(date,sensor_no)%>%
   mutate(count = n())%>%
   distinct()%>%
@@ -117,6 +118,8 @@ fold_split<-function(fol_name){
   lapply(fpl, file_split, fp = fp)
 }
 
+#here the anytime and anydate functions convert unix date formats to regular calendar dates and times
+
 file_split<-function(file_name, fp){
   
   sensor_no<-as.numeric(gsub("[^0-9.]", "",  file_name))
@@ -140,7 +143,7 @@ Reading in the OpenSensors data, counting the number of rows in each file. Each 
 
 ```{r}
 
-
+lf<-lf[nchar(lf) <=10]
 
 sensor_count<-function(file, dir_id){
   
@@ -193,14 +196,53 @@ all_sensors_merge$sensor_no<-as.numeric(all_sensors_merge$sensor_no)
 
 ```
 
+
+Additional information about the sensors from the documentation
+
+```{r}
+
+sensor_info<-read.csv("sensor_info.csv")
+
+all_sensors_merge<-merge(all_sensors_merge, sensor_info)
+
+```
+
+Sensor 4 moved on 14th May 2018 so renaming data at this point onwards as 4_2
+
+```{r}
+
+all_sensors_merge<-all_sensors_merge %>%
+ # filter(sensor_no == 4 & date >= as.Date("2018-05-14"))
+  mutate(sensor_no=replace(sensor_no, sensor_no == 4 & date >= as.Date("2018-05-14"), 4.5))
+
+all_sensors_merge %>%
+  filter(server == "Opensensors")%>%
+  summarize(max_date = max(date))
+
+#last date opensensors was working
+
+all_sensors_merge<-all_sensors_merge %>%
+  mutate(server = replace(server, date <= as.Date("2018-06-18"), "Opensensors" ), server = replace(server, date > as.Date("2018-06-18"), "CETools"))
+
+
+#save(all_sensors_merge, file = "all_sensor_data_2017-07-12_2019-2019_01_14")
+```
+
+```{r}
+
+load("all_sensor_data_2017-07-12_2019-2019_01_14")
+
+```
+
 Plot of each sensor from `r min_date` to `r max_date`, the height of each row relates to the number of detections in each day:
 
 ```{r}
 ggplot(all_sensors_merge, aes(x = date, y = sensor_no, group = sensor_no))+
-  geom_line(aes(size = log10(count), col= server))+
+  geom_line(color = "steelblue",aes(size = log10(count)))+
   scale_y_reverse(breaks = seq(1, 16, by = 1))+
   scale_x_date(date_breaks = "1 month", date_labels = "%m-%Y")+
   theme_bw()+
+  #theme(panel.background = element_blank())+
   theme(axis.text.y = element_text(lineheight = 0.5 , size = 18),
         axis.text.x = element_text(size = 14, angle = 45, hjust = 1),
         axis.title.x = element_text(size = 20),
@@ -242,5 +284,134 @@ kable(
   group_by(sensor_no, server) %>%
   filter(!is.na(count))%>%
   summarise(first_date = min(date), last_date = max(date)))
+
+```
+
+
+Making plots like [Newson et al. 2015](https://www.sciencedirect.com/science/article/pii/S0006320715002323#f0010) 
+
+Need to access time data from the Opensensors dataset
+
+```{r}
+
+ce_dirs<-list.dirs(here("data_archive/opensensors_Daniyar/qeoplogs_more/"))
+
+#getting rid of the folders with multiple dates in 
+ce_dirs<-ce_dirs[nchar(ce_dirs)==71]
+
+df<-data.frame()
+
+ce_tool_out<-function(ce_dir){
+  file_list<-list.files(ce_dir)
+  
+  for (file in file_list){
+         
+      if(grepl(".csv", file)){
+         df_temp = read.table(paste(ce_dir,"/", file, sep=""), sep=",", header = T, stringsAsFactors = F)
+         df_temp$sensor_id<-as.numeric(gsub("\\D", "", file))
+         df_temp$timestamp<-as.numeric(as.character(df_temp$timestamp))
+         df_temp$timestamp<-anytime(df_temp$timestamp/1000)
+         df_temp<-df_temp[,c("sensor_id","timestamp", "call_time", "prob_bat")]
+      } 
+    
+      if (grepl(".txt", file)) {
+         df_temp = read.table(paste(ce_dir,"/", file, sep=""), sep=",", fill= TRUE)
+         df_temp$sensor_id<-as.numeric(gsub("\\D", "", file))
+         df_temp$timestamp<-as.POSIXct(gsub("[^0-9.]", "", paste(df_temp$V3, df_temp$V4, ... =   df_temp$V5,df_temp$V6,df_temp$V7,df_temp$V8, sep=".")), format = ".%Y.%m.%d.%H.%M.%S")
+         df_temp$call_time<-as.numeric(gsub("[^0-9.]", "", df_temp$V17))
+         df_temp$prob_bat<-as.numeric(gsub("[^0-9.]", "", df_temp$V18))
+         df_temp<-df_temp[,c("sensor_id","timestamp", "call_time", "prob_bat")]
+        }
+         
+         df = rbind(df, df_temp)
+         print(paste(ce_dir, file, sep="/"))
+        
+          }
+  
+  return(df)
+}
+
+all_df<-lapply(ce_dirs, ce_tool_out)
+
+all_sens_df<-do.call("rbind", all_df)
+
+
+all_sens_df$date<-as.Date(all_sens_df$timestamp)
+
+all_sens_df$time<-format(all_sens_df$timestamp, "%H:%M:%S")
+
+#write.csv(all_sens_df, "all_sensors_all_records.csv", row.names = FALSE)
+
+```
+
+
+Adding a month column
+```{r}
+library(chron)
+library(scales)
+library(lubridate)
+library(ggplot2)
+
+all_sens_df<-read.csv("all_sensors_all_records.csv")
+
+all_sens_df$month<-months.Date(as.Date(all_sens_df$date))
+
+all_sens_df$month<-factor(all_sens_df$month, levels = month.name)
+
+all_sens_df$timestamp<-as.POSIXct(all_sens_df$timestamp)
+#all_sens_df$time<-chron(times = all_sens_df$time)
+
+t <- strftime(all_sens_df$timestamp, format="%H:%M:%S")
+
+all_sens_df$time<-as.POSIXct(t, format="%H:%M:%S")
+
+all_sens_df<-all_sens_df[complete.cases(all_sens_df),]
+
+all_sens_df$minute_from_noon<-all_sens_df$time
+
+
+midnight<-as.POSIXct("2019-02-14 00:00:00", format="%Y-%m-%d %H:%M:%S")
+
+all_sens_df$midnight_diff<-difftime(all_sens_df$time, midnight, units = "secs")
+
+
+ggplot(all_sens_df, aes(x = month, y = midnight_diff))+
+  geom_boxplot()+ 
+ # scale_y_datetime(limits = lims, trans = "reverse")
+# scale_y_continuous(trans = "reverse")
+
+
+
+#lims <- as.POSIXct(strptime(c("2019-02-14 23:00", "2019-02-14 01:00"), 
+#                   format = "%Y-%m-%d %H:%M"))
+
+
+
+#ggplot(month_mean_count, aes(x = month, y = )
+
+
+```
+
+
+```{r}
+c_trans <- function(a, b, breaks = b$breaks, format = b$format) {
+  a <- as.trans(a)
+  b <- as.trans(b)
+
+  name <- paste(a$name, b$name, sep = "-")
+
+  trans <- function(x) a$trans(b$trans(x))
+  inv <- function(x) b$inverse(a$inverse(x))
+
+  trans_new(name, trans, inverse = inv, breaks = breaks, format=format)
+
+}
+
+rev_date <- c_trans("reverse", "time")
+
+ggplot(all_sens_df, aes(x = month, y = time)) +
+  geom_boxplot() + 
+  scale_y_continuous(trans = rev_date, limits = lims)
+
 
 ```
