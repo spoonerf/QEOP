@@ -354,64 +354,38 @@ library(ggplot2)
 
 all_sens_df<-read.csv("all_sensors_all_records.csv")
 
-all_sens_df$month<-months.Date(as.Date(all_sens_df$date))
+sensor_info<-read.csv("sensor_info.csv")
 
-all_sens_df$month<-factor(all_sens_df$month, levels = month.name)
+all_sens_info<-merge(all_sens_df, sensor_info, by.x = "sensor_id", by.y = "Sensor_no")
 
-all_sens_df$timestamp<-as.POSIXct(all_sens_df$timestamp)
-#all_sens_df$time<-chron(times = all_sens_df$time)
+all_sens_info$month<-months.Date(as.Date(all_sens_info$date))
 
-t <- strftime(all_sens_df$timestamp, format="%H:%M:%S")
+all_sens_info$month<-factor(all_sens_info$month, levels = month.name)
 
-all_sens_df$time<-as.POSIXct(t, format="%H:%M:%S")
+all_sens_info$timestamp<-as.POSIXct(all_sens_info$timestamp)
 
-all_sens_df<-all_sens_df[complete.cases(all_sens_df),]
+t <- strftime(all_sens_info$timestamp, format="%H:%M:%S")
 
-all_sens_df$minute_from_noon<-all_sens_df$time
+all_sens_info$time<-as.POSIXct(t, format="%H:%M:%S")
 
+all_sens_info<-all_sens_info[complete.cases(all_sens_info),]
 
-midnight<-as.POSIXct("2019-02-14 00:00:00", format="%Y-%m-%d %H:%M:%S")
+########trying it out with all data 
 
-all_sens_df$midnight_diff<-difftime(all_sens_df$time, midnight, units = "secs")
+all_sens_info$Habitat<-as.character(all_sens_info$Habitat)
 
+#shifting anything before 6pm forwrd by a day
+all_sens_info[hour(all_sens_info$timestamp) < 18, ]$time<-all_sens_info[hour(all_sens_info$timestamp) < 18, ]$time +days(1)
 
-ggplot(all_sens_df, aes(x = month, y = midnight_diff))+
-  geom_boxplot()+ 
- # scale_y_datetime(limits = lims, trans = "reverse")
-# scale_y_continuous(trans = "reverse")
+all_sens_info_night<-all_sens_info[all_sens_info$time < as.POSIXct("2019-02-16 06:00:00 GMT"),]
 
-
-
-#lims <- as.POSIXct(strptime(c("2019-02-14 23:00", "2019-02-14 01:00"), 
-#                   format = "%Y-%m-%d %H:%M"))
-
-
-
-#ggplot(month_mean_count, aes(x = month, y = )
-
+ggplot(all_sens_info_night, aes(x = month, y = (time)))+
+  geom_boxplot(aes(fill=Habitat))+
+  facet_wrap(.~sensor_id)+
+  labs(x = "Month", y = "Time")+
+  scale_x_discrete(labels=month.abb[c(1,4,7,10)], breaks = c("January", "April", "July", "October")) +
+  theme_bw()
 
 ```
 
 
-```{r}
-c_trans <- function(a, b, breaks = b$breaks, format = b$format) {
-  a <- as.trans(a)
-  b <- as.trans(b)
-
-  name <- paste(a$name, b$name, sep = "-")
-
-  trans <- function(x) a$trans(b$trans(x))
-  inv <- function(x) b$inverse(a$inverse(x))
-
-  trans_new(name, trans, inverse = inv, breaks = breaks, format=format)
-
-}
-
-rev_date <- c_trans("reverse", "time")
-
-ggplot(all_sens_df, aes(x = month, y = time)) +
-  geom_boxplot() + 
-  scale_y_continuous(trans = rev_date, limits = lims)
-
-
-```
