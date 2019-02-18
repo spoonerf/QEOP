@@ -424,6 +424,9 @@ Narrative for each sensor:
 Bat sensor one
 
 ```{r}
+
+###need to sort out sensor four 
+
 library(leaflet)
 library(htmltools)
 library(mapview)
@@ -434,6 +437,20 @@ s1<-dplyr::filter(all_sens_info, sensor_id == 1)
 
 file_1<-'D:/Fiona/QEOP/data_archive/sensor_pics/sensor_1.png'
 file_2<-'D:/Fiona/QEOP/data_archive/sensor_pics/sensor_2.png'
+file_3<-'D:/Fiona/QEOP/data_archive/sensor_pics/sensor_3.png'
+file_4_1<-'D:/Fiona/QEOP/data_archive/sensor_pics/sensor_4_1.png'
+#file_4_2<-'D:/Fiona/QEOP/data_archive/sensor_pics/sensor_4_1.png'
+file_5<-'D:/Fiona/QEOP/data_archive/sensor_pics/sensor_5.png'
+file_6<-'D:/Fiona/QEOP/data_archive/sensor_pics/sensor_6.png'
+file_7<-'D:/Fiona/QEOP/data_archive/sensor_pics/sensor_7.png'
+file_8<-'D:/Fiona/QEOP/data_archive/sensor_pics/sensor_8.png'
+file_9<-'D:/Fiona/QEOP/data_archive/sensor_pics/sensor_9.png'
+file_10<-'D:/Fiona/QEOP/data_archive/sensor_pics/sensor_10.png'
+file_11<-'D:/Fiona/QEOP/data_archive/sensor_pics/sensor_11.png'
+file_12<-'D:/Fiona/QEOP/data_archive/sensor_pics/sensor_12.png'
+file_13<-'D:/Fiona/QEOP/data_archive/sensor_pics/sensor_13.png'
+file_14<-'D:/Fiona/QEOP/data_archive/sensor_pics/sensor_14.png'
+file_15<-'D:/Fiona/QEOP/data_archive/sensor_pics/sensor_15.png'
 
 content_1 <- paste(sep = "<br/>",
                paste0("<b>Sensor 1: </b>"),
@@ -449,10 +466,110 @@ content_2 <- paste(sep = "<br/>",
                paste0("<b>Direction: </b>", "Facing towards the river"),
                paste0("<b>Habitat: </b>", "Water"))
 
+content_3 <- paste(sep = "<br/>",
+               paste0("<b>Sensor 3: </b>"),
+               paste0("<b>Lamp post ID: </b>", "C92A"),
+               paste0("<b>Direction: </b>", "Towards grass bank, away from road"),
+               paste0("<b>Habitat: </b>", "Grassland"))
+
+content_4_1 <- paste(sep = "<br/>",
+               paste0("<b>Sensor 4: </b>"),
+               paste0("<b>Lamp post ID: </b>", "TC327"),
+               paste0("<b>Direction: </b>", "Towards allotments"),
+               paste0("<b>Habitat: </b>", "Grassland"))
+
+content_5 <- paste(sep = "<br/>",
+               paste0("<b>Sensor 5: </b>"),
+               paste0("<b>Lamp post ID: </b>", "H"),
+               paste0("<b>Direction: </b>", "Away from river"),
+               paste0("<b>Habitat: </b>", "Grassland"),
+               paste0("<b>Lighting: </b>", "Light directed onto path. Spill onto river. Spotlight, probably not LED."),
+               paste0("<b>Light levels (Lux): : </b>", "0.04-0.09 on path under light, 0.014 behind light on grass verge."))
+
+content_6 <- paste(sep = "<br/>",
+               paste0("<b>Sensor 6: </b>"),
+               paste0("<b>CCTV post: </b>", "H"),
+               paste0("<b>Direction: </b>", "Towards river"),
+               paste0("<b>Habitat: </b>", "Water"))
+
+content_7 <- paste(sep = "<br/>",
+               paste0("<b>Sensor 7: </b>"),
+               paste0("<b>Lamp post: </b>", "CA13"),
+               paste0("<b>Direction: </b>", "Towards river"),
+               paste0("<b>Habitat: </b>", "Water"))
+
+content_8 <- paste(sep = "<br/>",
+               paste0("<b>Sensor 8: </b>"),
+               paste0("<b>Lamp post: </b>", "TC244"),
+               paste0("<b>Direction: </b>", "Towards river"),
+               paste0("<b>Habitat: </b>", "Water"))
+
+content_9 <- paste(sep = "<br/>",
+               paste0("<b>Sensor 9: </b>"),
+               paste0("<b>Lamp post: </b>", "LS61"),
+               paste0("<b>Direction: </b>", "Towards trees away from path"),
+               paste0("<b>Habitat: </b>", "Trees"))
+
+content_10 <- paste(sep = "<br/>",
+               paste0("<b>Sensor 10: </b>"),
+               paste0("<b>Lamp post: </b>", "TC508"),
+               paste0("<b>Direction: </b>", "Towards stadium across grass and tree area"),
+               paste0("<b>Habitat: </b>", "Grassland"),
+               paste0("<b>Lighting: </b>", "Grassland area reasonably dark."),
+               paste0("<b>Light levels (Lux): : </b>", "0.05 on path. 0.02 immediately behind lamppost on grass. <br> 0.01 4m behind lamppost on grass. 0.003 10m behind lamppost on grass. "))
+
+content_11 <- paste(sep = "<br/>",
+               paste0("<b>Sensor 11: </b>"),
+               paste0("<b>Lamp post: </b>", "CDM3832"),
+               paste0("<b>Direction: </b>", "Facing across grass mound away from trees"),
+               paste0("<b>Habitat: </b>", "Parkland"))
+
+content_12 <- paste(sep = "<br/>",
+               paste0("<b>Sensor 12: </b>"),
+               paste0("<b>Lamp post: </b>", "LS64"),
+               paste0("<b>Direction: </b>", "Facing south, across tree and grass area"),
+               paste0("<b>Habitat: </b>", "Grassland"),
+               paste0("<b>Lighting: </b>", "Continuous brightness to the side"),
+               paste0("<b>Light levels (Lux): : </b>", "0.036 on track. 0.02 directly behind lamppost on grass.<br> 0.012 3m behind. 0.008 5m behind. 0.003 on flat grass, 10m. 15-20m to edge if spill."))
+
+content_13 <- paste(sep = "<br/>",
+               paste0("<b>Sensor 13: </b>"),
+               paste0("<b>Lamp post: </b>", "LD07"),
+               paste0("<b>Direction: </b>", "Facing towards the grass away from the path"),
+               paste0("<b>Habitat: </b>", "Grassland"))
+
+content_14 <- paste(sep = "<br/>",
+               paste0("<b>Sensor 14: </b>"),
+               paste0("<b>Lamp post: </b>", "LS85"),
+               paste0("<b>Direction: </b>", "Towards trees"),
+               paste0("<b>Habitat: </b>", "Trees"),
+               paste0("<b>Lighting: </b>", "Very dark on other side of bank"),
+               paste0("<b>Light levels (Lux): : </b>", "0.051 directly underneath. 0.045 beside.<br> 0.025 2m behind lamppost on grass. 0.016 5m behind. 0.006 7m behind."))
+
+content_15 <- paste(sep = "<br/>",
+               paste0("<b>Sensor 15: </b>"),
+               paste0("<b>Lamp post: </b>", "LS31"),
+               paste0("<b>Direction: </b>", "Facing towards the bridge across the grass area"),
+               paste0("<b>Habitat: </b>", "Parkland"))
+
 m <- leaflet() %>%
-  addTiles() %>%  # Add default OpenStreetMap map tiles
-  #addMarkers(lng=s1$Lon[1], lat=s1$Lat[1], popup="Sensor 1: <br> Lamp post ID: CP03 <br> Direction: towards grass <br> Habitat: Parkland <br> Lighting: Not directly onto grass, but directed into trees on path. <br> Light levels (Lux): on path 0.08. On grass 0.01.", icon = bat)
-  addMarkers(lng=s1$Lon[1], lat=s1$Lat[1], popup=popupImage(file), icon = bat, label =  htmltools::HTML(content), labelOptions = labelOptions(direction = "bottom") )
+  addTiles() %>%  
+  addMarkers(lng=all_sens_info[all_sens_info$sensor_id == 1, ]$Lon[1], lat=all_sens_info[all_sens_info$sensor_id == 1, ]$Lat[1], popup=popupImage(file_1), icon = bat, label =  htmltools::HTML(content_1), labelOptions = labelOptions(direction = "bottom"))%>%  
+  addMarkers(lng=all_sens_info[all_sens_info$sensor_id == 2, ]$Lon[1], lat=all_sens_info[all_sens_info$sensor_id == 2, ]$Lat[1], popup=popupImage(file_2), icon = bat, label =  htmltools::HTML(content_2), labelOptions = labelOptions(direction = "bottom")) %>%
+  addMarkers(lng=all_sens_info[all_sens_info$sensor_id == 3, ]$Lon[1], lat=all_sens_info[all_sens_info$sensor_id == 3, ]$Lat[1], popup=popupImage(file_3), icon = bat, label =  htmltools::HTML(content_3), labelOptions = labelOptions(direction = "bottom")) %>%
+  addMarkers(lng=all_sens_info[all_sens_info$sensor_id == 4, ]$Lon[1], lat=all_sens_info[all_sens_info$sensor_id == 4, ]$Lat[1], popup=popupImage(file_4_1), icon = bat, label =  htmltools::HTML(content_4_1), labelOptions = labelOptions(direction = "bottom")) %>%
+    # addMarkers(lng=all_sens_info[all_sens_info$sensor_id == 4, ]$Lon[1], lat=all_sens_info[all_sens_info$sensor_id == 4, ]$Lat[1], popup=popupImage(file_4_2), icon = bat, label =  htmltools::HTML(content_4_2), labelOptions = labelOptions(direction = "bottom")) %>%
+  addMarkers(lng=all_sens_info[all_sens_info$sensor_id == 5, ]$Lon[1], lat=all_sens_info[all_sens_info$sensor_id == 5, ]$Lat[1], popup=popupImage(file_5), icon = bat, label =  htmltools::HTML(content_5), labelOptions = labelOptions(direction = "bottom")) %>%
+  addMarkers(lng=all_sens_info[all_sens_info$sensor_id == 6, ]$Lon[1], lat=all_sens_info[all_sens_info$sensor_id == 6, ]$Lat[1], popup=popupImage(file_6), icon = bat, label =  htmltools::HTML(content_6), labelOptions = labelOptions(direction = "bottom")) %>%
+  addMarkers(lng=all_sens_info[all_sens_info$sensor_id == 7, ]$Lon[1], lat=all_sens_info[all_sens_info$sensor_id == 7, ]$Lat[1], popup=popupImage(file_7), icon = bat, label =  htmltools::HTML(content_7), labelOptions = labelOptions(direction = "bottom")) %>%
+  addMarkers(lng=all_sens_info[all_sens_info$sensor_id == 8, ]$Lon[1], lat=all_sens_info[all_sens_info$sensor_id == 8, ]$Lat[1], popup=popupImage(file_8), icon = bat, label =  htmltools::HTML(content_8), labelOptions = labelOptions(direction = "bottom")) %>%
+  addMarkers(lng=all_sens_info[all_sens_info$sensor_id == 9, ]$Lon[1], lat=all_sens_info[all_sens_info$sensor_id == 9, ]$Lat[1], popup=popupImage(file_9), icon = bat, label =  htmltools::HTML(content_9), labelOptions = labelOptions(direction = "bottom")) %>%
+  addMarkers(lng=all_sens_info[all_sens_info$sensor_id == 10, ]$Lon[1], lat=all_sens_info[all_sens_info$sensor_id == 10, ]$Lat[1], popup=popupImage(file_10), icon = bat, label =  htmltools::HTML(content_10), labelOptions = labelOptions(direction = "bottom")) %>%
+  addMarkers(lng=all_sens_info[all_sens_info$sensor_id == 11, ]$Lon[1], lat=all_sens_info[all_sens_info$sensor_id == 11, ]$Lat[1], popup=popupImage(file_11), icon = bat, label =  htmltools::HTML(content_11), labelOptions = labelOptions(direction = "bottom")) %>%
+  addMarkers(lng=all_sens_info[all_sens_info$sensor_id == 12, ]$Lon[1], lat=all_sens_info[all_sens_info$sensor_id == 12, ]$Lat[1], popup=popupImage(file_12), icon = bat, label =  htmltools::HTML(content_12), labelOptions = labelOptions(direction = "bottom")) %>%
+  addMarkers(lng=all_sens_info[all_sens_info$sensor_id == 13, ]$Lon[1], lat=all_sens_info[all_sens_info$sensor_id == 13, ]$Lat[1], popup=popupImage(file_13), icon = bat, label =  htmltools::HTML(content_13), labelOptions = labelOptions(direction = "bottom")) %>%
+  addMarkers(lng=all_sens_info[all_sens_info$sensor_id == 14, ]$Lon[1], lat=all_sens_info[all_sens_info$sensor_id == 14, ]$Lat[1], popup=popupImage(file_14), icon = bat, label =  htmltools::HTML(content_14), labelOptions = labelOptions(direction = "bottom")) %>%
+  addMarkers(lng=all_sens_info[all_sens_info$sensor_id == 15, ]$Lon[1], lat=all_sens_info[all_sens_info$sensor_id == 15, ]$Lat[1], popup=popupImage(file_15), icon = bat, label =  htmltools::HTML(content_15), labelOptions = labelOptions(direction = "bottom"))
 
 m
 
