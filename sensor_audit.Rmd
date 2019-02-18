@@ -244,13 +244,15 @@ ggplot(all_sensors_merge, aes(x = date, y = sensor_no, group = sensor_no))+
   theme_bw()+
   #theme(panel.background = element_blank())+
   theme(axis.text.y = element_text(lineheight = 0.5 , size = 18),
-        axis.text.x = element_text(size = 14, angle = 45, hjust = 1),
+        axis.text.x = element_text(size = 14, angle= 45, hjust = 1),
         axis.title.x = element_text(size = 20),
         axis.title.y = element_text(size = 20),
         legend.text=element_text(size=18),
         legend.title=element_text(size=20))+
   labs(x = "Date", y = "Sensor No.", linetype = "test")+
-  guides(colour = "none", size = guide_legend(title ="Detections\n(Log)"))
+  #scale_fill_continuous(breaks = c(0,1,2,3,4), labels = c("1","10", "100","1000","10000"), guide =guide_legend(title ="Detections\n(Log10)"))
+  scale_size_continuous(breaks = c(0,1,2,3,4),labels = c("1","10","100", "1000", "10000"))+
+  guides(size = guide_legend(title ="Detections"))
 
 ```
 
@@ -269,7 +271,7 @@ ggplot(all_sensors_merge, aes(x = date, y = sensor_no, group = sensor_no))+
         legend.text=element_text(size=18),
         legend.title=element_text(size=20))+
   labs(x = "Date", y = "Sensor No.", linetype = "test")+
-  guides(colour = "none", size = guide_legend(title ="Detections\n(Log)"))
+  guides(colour = "none", size = guide_legend(title ="Detections\n(Log10)"))
 
 ```
 
@@ -292,7 +294,7 @@ Making plots like [Newson et al. 2015](https://www.sciencedirect.com/science/art
 
 Need to access time data from the Opensensors dataset
 
-```{r}
+```{r, eval= FALSE}
 
 ce_dirs<-list.dirs(here("data_archive/opensensors_Daniyar/qeoplogs_more/"))
 
@@ -317,14 +319,14 @@ ce_tool_out<-function(ce_dir){
       if (grepl(".txt", file)) {
          df_temp = read.table(paste(ce_dir,"/", file, sep=""), sep=",", fill= TRUE)
          df_temp$sensor_id<-as.numeric(gsub("\\D", "", file))
-         df_temp$timestamp<-as.POSIXct(gsub("[^0-9.]", "", paste(df_temp$V3, df_temp$V4, ... =   df_temp$V5,df_temp$V6,df_temp$V7,df_temp$V8, sep=".")), format = ".%Y.%m.%d.%H.%M.%S")
+         df_temp$timestamp<-as.POSIXct(gsub("[^0-9.]", "", paste(df_temp$V3, df_temp$V4,df_temp$V5,df_temp$V6,df_temp$V7,df_temp$V8, sep=".")), format = ".%Y.%m.%d.%H.%M.%S")
          df_temp$call_time<-as.numeric(gsub("[^0-9.]", "", df_temp$V17))
          df_temp$prob_bat<-as.numeric(gsub("[^0-9.]", "", df_temp$V18))
          df_temp<-df_temp[,c("sensor_id","timestamp", "call_time", "prob_bat")]
         }
          
          df = rbind(df, df_temp)
-         print(paste(ce_dir, file, sep="/"))
+         #print(paste(ce_dir, file, sep="/"))
         
           }
   
@@ -345,7 +347,7 @@ all_sens_df$time<-format(all_sens_df$timestamp, "%H:%M:%S")
 ```
 
 
-Adding a month column
+Adding a month column and formatting data for plotting record data over the year
 ```{r}
 library(chron)
 library(scales)
@@ -377,9 +379,9 @@ all_sens_info$Habitat<-as.character(all_sens_info$Habitat)
 #shifting anything before 6pm forwrd by a day
 all_sens_info[hour(all_sens_info$timestamp) < 18, ]$time<-all_sens_info[hour(all_sens_info$timestamp) < 18, ]$time +days(1)
 
-all_sens_info_night<-all_sens_info[all_sens_info$time < as.POSIXct("2019-02-16 06:00:00 GMT"),]
+all_sens_info_night<-all_sens_info[all_sens_info$time < as.POSIXct(paste(Sys.Date()+1, " 06:00:00 GMT", sep="")),]
 
-ggplot(all_sens_info_night, aes(x = month, y = (time)))+
+ggplot(all_sens_info_night, aes(x = month, y = time))+
   geom_boxplot(aes(fill=Habitat))+
   facet_wrap(.~sensor_id)+
   labs(x = "Month", y = "Time")+
@@ -387,5 +389,74 @@ ggplot(all_sens_info_night, aes(x = month, y = (time)))+
   theme_bw()
 
 ```
+
+
+```{r}
+library(suncalc)
+
+QEOP_loc<-c(mean(unique(all_sens_info$Lat)), mean(unique(all_sens_info$Lon)))
+
+suntimes<-getSunlightTimes(lat = QEOP_loc[1], lon = QEOP_loc[2], date = as.Date(unique(all_sens_info$date)), keep = c("sunrise", "sunset"))
+
+suntimes$date<-as.Date(suntimes$date)
+all_sens_info_night$date<-as.Date(all_sens_info_night$date)
+
+df<-merge(suntimes, all_sens_info_night, by="date")
+df$sunrise <- strftime(df$sunrise, format="%H:%M:%S")
+df$sunrise <- as.POSIXct(df$sunrise, format="%H:%M:%S")
+
+ggplot(df, aes(x = month, y = time))+
+  geom_boxplot(aes(fill=Habitat))+ 
+  geom_line(aes(x = date, y = sunrise))
+
+
+ggplot(df, aes(x = date, y = sunrise))+
+  #geom_boxplot(aes(fill=Habitat))+ 
+  geom_line()
+
+
+
+
+```
+
+Narrative for each sensor:
+
+Bat sensor one
+
+```{r}
+library(leaflet)
+library(htmltools)
+library(mapview)
+
+bat = makeIcon("bat.png", 36, 36)
+
+s1<-dplyr::filter(all_sens_info, sensor_id == 1)
+
+file_1<-'D:/Fiona/QEOP/data_archive/sensor_pics/sensor_1.png'
+file_2<-'D:/Fiona/QEOP/data_archive/sensor_pics/sensor_2.png'
+
+content_1 <- paste(sep = "<br/>",
+               paste0("<b>Sensor 1: </b>"),
+               paste0("<b>Lamp post ID: </b>", "CP03"),
+               paste0("<b>Direction: </b>", "Towards grass"),
+               paste0("<b>Habitat: </b>", "Parkland"),
+               paste0("<b>Lighting: </b>", "Not directly onto grass, but directed into trees on path."),
+               paste0("<b>Light levels (Lux): : </b>", "On path 0.08; on grass 0.01."))
+
+content_2 <- paste(sep = "<br/>",
+               paste0("<b>Sensor 2: </b>"),
+               paste0("<b>Lamp post ID: </b>", "TC472"),
+               paste0("<b>Direction: </b>", "Facing towards the river"),
+               paste0("<b>Habitat: </b>", "Water"))
+
+m <- leaflet() %>%
+  addTiles() %>%  # Add default OpenStreetMap map tiles
+  #addMarkers(lng=s1$Lon[1], lat=s1$Lat[1], popup="Sensor 1: <br> Lamp post ID: CP03 <br> Direction: towards grass <br> Habitat: Parkland <br> Lighting: Not directly onto grass, but directed into trees on path. <br> Light levels (Lux): on path 0.08. On grass 0.01.", icon = bat)
+  addMarkers(lng=s1$Lon[1], lat=s1$Lat[1], popup=popupImage(file), icon = bat, label =  htmltools::HTML(content), labelOptions = labelOptions(direction = "bottom") )
+
+m
+
+```
+
 
 
