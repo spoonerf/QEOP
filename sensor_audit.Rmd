@@ -196,8 +196,8 @@ all_sensors_merge$sensor_no<-as.numeric(all_sensors_merge$sensor_no)
 Plot of each sensor from `r min_date` to `r max_date`, the height of each row relates to the number of detections in each day:
 
 ```{r}
-ggplot(all_sensors_merge, aes(x = date, y = sensor_no, group = sensor_no))+
-  geom_line(aes(size = log10(count), col= server))+
+ggplot(all_sensors_merge, aes(x = date, y = sensor_no, group = sensor_no, col="blue"))+
+  geom_line(aes(size = log10(count), col= "blue"))+
   scale_y_reverse(breaks = seq(1, 16, by = 1))+
   scale_x_date(date_breaks = "1 month", date_labels = "%m-%Y")+
   theme_bw()+
@@ -215,19 +215,24 @@ ggplot(all_sensors_merge, aes(x = date, y = sensor_no, group = sensor_no))+
 
 
 ```{r, eval = FALSE, echo = FALSE}
+library(devtools)
+install_github("bbc/bbplot")
+library(bbplot)
+
 ggplot(all_sensors_merge, aes(x = date, y = sensor_no, group = sensor_no))+
   geom_line(aes(size = count, col= server))+
   scale_y_reverse(breaks = seq(1, 16, by = 1))+
   scale_x_date(date_breaks = "1 month", date_labels = "%m-%Y")+
-  theme_bw()+
-  theme(axis.text.y = element_text(lineheight = 0.5 , size = 18),
-        axis.text.x = element_text(size = 14, angle = 45, hjust = 1),
-        axis.title.x = element_text(size = 20),
-        axis.title.y = element_text(size = 20),
-        legend.text=element_text(size=18),
-        legend.title=element_text(size=20))+
+#  theme(axis.text.y = element_text(lineheight = 0.5 , size = 18),
+        # axis.text.x = element_text(size = 14, angle = 45, hjust = 1),
+        # axis.title.x = element_text(size = 20),
+        # axis.title.y = element_text(size = 20),
+        # legend.text=element_text(size=18),
+        # legend.title=element_text(size=20))+
   labs(x = "Date", y = "Sensor No.", linetype = "test")+
-  guides(colour = "none", size = guide_legend(title ="Detections\n(Log)"))
+  guides(colour = "none", size = guide_legend(title ="Detections\n(Log)"))+
+  bbc_style()
+
 
 ```
 
