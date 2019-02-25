@@ -25,7 +25,9 @@ Reading in the data from the CE Tools Server:
 
 ```{r}
 
-dump<-read.table("qeop_dump_all.csv", fill=T, sep=",")
+#dump<-read.table("qeop_dump_all.csv", fill=T, sep=",")
+
+dump<-read.table("qeop_dump_2019_02_23.csv", fill=T, sep=",")
 
 ##adding in a column to identify each row with a sensor
 
@@ -66,9 +68,10 @@ dump$time<- format(dump$datetime, "%H:%M:%S")
 Calculating the number of detections per day for each sensor:
 
 ```{r}
+library(dplyr)
 
 days_active<-dump %>%
-  select(date, sensor_no)%>%
+  dplyr::select(date, sensor_no)%>%
   group_by(date,sensor_no)%>%
   mutate(count = n())%>%
   distinct()%>%
@@ -117,6 +120,8 @@ fold_split<-function(fol_name){
   lapply(fpl, file_split, fp = fp)
 }
 
+#here the anytime and anydate functions convert unix date formats to regular calendar dates and times
+
 file_split<-function(file_name, fp){
   
   sensor_no<-as.numeric(gsub("[^0-9.]", "",  file_name))
@@ -140,7 +145,7 @@ Reading in the OpenSensors data, counting the number of rows in each file. Each 
 
 ```{r}
 
-
+lf<-lf[nchar(lf) <=10]
 
 sensor_count<-function(file, dir_id){
   
@@ -193,46 +198,108 @@ all_sensors_merge$sensor_no<-as.numeric(all_sensors_merge$sensor_no)
 
 ```
 
+
+Additional information about the sensors from the documentation
+
+```{r}
+
+sensor_info<-read.csv("sensor_info.csv")
+
+all_sensors_merge<-merge(all_sensors_merge, sensor_info)
+
+```
+
+Sensor 4 moved on 14th May 2018 so renaming data at this point onwards as 4_2
+
+```{r}
+
+all_sensors_merge<-all_sensors_merge %>%
+ # filter(sensor_no == 4 & date >= as.Date("2018-05-14"))
+  mutate(sensor_no=replace(sensor_no, sensor_no == 4 & date >= as.Date("2018-05-14"), 4.5))
+
+all_sensors_merge %>%
+  filter(server == "Opensensors")%>%
+  summarize(max_date = max(date))
+
+#last date opensensors was working
+
+all_sensors_merge<-all_sensors_merge %>%
+  mutate(server = replace(server, date <= as.Date("2018-06-18"), "Opensensors" ), server = replace(server, date > as.Date("2018-06-18"), "CETools"))
+
+
+#save(all_sensors_merge, file = "all_sensor_data_2017-07-12_2019-2019_01_14")
+#save(all_sensors_merge, file = "all_sensor_data_2017_07_12-2019_02_23")
+
+
+```
+
+```{r}
+
+#load("all_sensor_data_2017-07-12_2019-2019_01_14")
+load("all_sensor_data_2017_07_12-2019_02_23")
+
+```
+
 Plot of each sensor from `r min_date` to `r max_date`, the height of each row relates to the number of detections in each day:
 
 ```{r}
-ggplot(all_sensors_merge, aes(x = date, y = sensor_no, group = sensor_no, col="blue"))+
-  geom_line(aes(size = log10(count), col= "blue"))+
+ggplot(all_sensors_merge, aes(x = date, y = sensor_no, group = sensor_no))+
+  geom_line(color = "steelblue",aes(size = log10(count)))+
   scale_y_reverse(breaks = seq(1, 16, by = 1))+
   scale_x_date(date_breaks = "1 month", date_labels = "%m-%Y")+
   theme_bw()+
+  #theme(panel.background = element_blank())+
   theme(axis.text.y = element_text(lineheight = 0.5 , size = 18),
-        axis.text.x = element_text(size = 14, angle = 45, hjust = 1),
+        axis.text.x = element_text(size = 14, angle= 45, hjust = 1),
         axis.title.x = element_text(size = 20),
         axis.title.y = element_text(size = 20),
         legend.text=element_text(size=18),
         legend.title=element_text(size=20))+
   labs(x = "Date", y = "Sensor No.", linetype = "test")+
-  guides(colour = "none", size = guide_legend(title ="Detections\n(Log)"))
+  #scale_fill_continuous(breaks = c(0,1,2,3,4), labels = c("1","10", "100","1000","10000"), guide =guide_legend(title ="Detections\n(Log10)"))
+  scale_size_continuous(breaks = c(0,1,2,3,4),labels = c("1","10","100", "1000", "10000"))+
+  guides(size = guide_legend(title ="Detections"))
+
+```
+
+```{r}
+ggplot(all_sensors_merge, aes(x = date, y = sensor_no, group = sensor_no))+
+  geom_line(color = "steelblue",aes(size = count))+
+  scale_y_reverse(breaks = seq(1, 16, by = 1))+
+  scale_x_date(date_breaks = "1 month", date_labels = "%m-%Y")+
+  theme_bw()+
+  #theme(panel.background = element_blank())+
+  theme(axis.text.y = element_text(lineheight = 0.5 , size = 18),
+        axis.text.x = element_text(size = 14, angle= 45, hjust = 1),
+        axis.title.x = element_text(size = 20),
+        axis.title.y = element_text(size = 20),
+        legend.text=element_text(size=18),
+        legend.title=element_text(size=20))+
+  labs(x = "Date", y = "Sensor No.", linetype = "test")+
+  #scale_fill_continuous(breaks = c(0,1,2,3,4), labels = c("1","10", "100","1000","10000"), guide =guide_legend(title ="Detections\n(Log10)"))
+ # scale_size_continuous(breaks = c(0,1,2,3,4),labels = c("1","10","100", "1000", "10000"))+
+  guides(size = guide_legend(title ="Detections"))
 
 ```
 
 
-
 ```{r, eval = FALSE, echo = FALSE}
-library(devtools)
-install_github("bbc/bbplot")
-library(bbplot)
-
-ggplot(all_sensors_merge, aes(x = date, y = sensor_no, group = sensor_no))+
-  geom_line(aes(size = count, col= server))+
-  scale_y_reverse(breaks = seq(1, 16, by = 1))+
+ggplot(all_sensors_merge[all_sensors_merge$sensor_no == 5,], aes(x = date, y = sensor_no, group = sensor_no))+
+  geom_line(color = "steelblue",aes(size = count))+
+  #scale_y_reverse(breaks = seq(1, 16, by = 1))+
   scale_x_date(date_breaks = "1 month", date_labels = "%m-%Y")+
-#  theme(axis.text.y = element_text(lineheight = 0.5 , size = 18),
-        # axis.text.x = element_text(size = 14, angle = 45, hjust = 1),
-        # axis.title.x = element_text(size = 20),
-        # axis.title.y = element_text(size = 20),
-        # legend.text=element_text(size=18),
-        # legend.title=element_text(size=20))+
+  theme_bw()+
+  #theme(panel.background = element_blank())+
+  theme(axis.text.y = element_text(lineheight = 0.5 , size = 18),
+        axis.text.x = element_text(size = 14, angle= 45, hjust = 1),
+        axis.title.x = element_text(size = 20),
+        axis.title.y = element_text(size = 20),
+        legend.text=element_text(size=18),
+        legend.title=element_text(size=20))+
   labs(x = "Date", y = "Sensor No.", linetype = "test")+
-  guides(colour = "none", size = guide_legend(title ="Detections\n(Log)"))+
-  bbc_style()
-
+  #scale_fill_continuous(breaks = c(0,1,2,3,4), labels = c("1","10", "100","1000","10000"), guide =guide_legend(title ="Detections\n(Log10)"))
+ # scale_size_continuous(breaks = c(0,1,2,3,4),labels = c("1","10","100", "1000", "10000"))+
+  guides(size = guide_legend(title ="Detections"))
 
 ```
 
@@ -249,3 +316,317 @@ kable(
   summarise(first_date = min(date), last_date = max(date)))
 
 ```
+
+
+Making plots like [Newson et al. 2015](https://www.sciencedirect.com/science/article/pii/S0006320715002323#f0010) 
+
+Need to access time data from the Opensensors dataset
+
+```{r, eval= FALSE}
+
+ce_dirs<-list.dirs(here("data_archive/opensensors_Daniyar/qeoplogs_more/"))
+
+#getting rid of the folders with multiple dates in 
+ce_dirs<-ce_dirs[nchar(ce_dirs)==71]
+
+df<-data.frame()
+
+ce_tool_out<-function(ce_dir){
+  file_list<-list.files(ce_dir)
+  
+  for (file in file_list){
+         
+      if(grepl(".csv", file)){
+         df_temp = read.table(paste(ce_dir,"/", file, sep=""), sep=",", header = T, stringsAsFactors = F)
+         df_temp$sensor_id<-as.numeric(gsub("\\D", "", file))
+         df_temp$timestamp<-as.numeric(as.character(df_temp$timestamp))
+         df_temp$timestamp<-anytime(df_temp$timestamp/1000)
+         df_temp<-df_temp[,c("sensor_id","timestamp", "call_time", "prob_bat")]
+      } 
+    
+      if (grepl(".txt", file)) {
+         df_temp = read.table(paste(ce_dir,"/", file, sep=""), sep=",", fill= TRUE)
+         df_temp$sensor_id<-as.numeric(gsub("\\D", "", file))
+         df_temp$timestamp<-as.POSIXct(gsub("[^0-9.]", "", paste(df_temp$V3, df_temp$V4,df_temp$V5,df_temp$V6,df_temp$V7,df_temp$V8, sep=".")), format = ".%Y.%m.%d.%H.%M.%S")
+         df_temp$call_time<-as.numeric(gsub("[^0-9.]", "", df_temp$V17))
+         df_temp$prob_bat<-as.numeric(gsub("[^0-9.]", "", df_temp$V18))
+         df_temp<-df_temp[,c("sensor_id","timestamp", "call_time", "prob_bat")]
+        }
+         
+         df = rbind(df, df_temp)
+         #print(paste(ce_dir, file, sep="/"))
+        
+          }
+  
+  return(df)
+}
+
+ce_df<-lapply(ce_dirs, ce_tool_out)
+
+ce_sens_df<-do.call("rbind", ce_df)
+
+
+ce_sens_df$date<-as.Date(ce_sens_df$timestamp)
+
+ce_sens_df$time<-format(ce_sens_df$timestamp, "%H:%M:%S")
+
+#write.csv(ce_sens_df, "all_sensors_ce_records.csv", row.names = FALSE)
+
+```
+
+```{r}
+
+open_sensors<-data.frame(dump[,c("sensor","datetime","time","prob_bat", "date", "time")])
+colnames(open_sensors)<-colnames(ce_sens_df)
+open_sensors$sensor_id<- gsub("[^0-9.]", "", open_sensors$sensor_id)
+
+#write.csv(open_sensors, "all_sensors_os_records.csv", row.names = FALSE)
+
+```
+
+
+Adding a month column and formatting data for plotting record data over the year
+```{r}
+library(chron)
+library(scales)
+library(lubridate)
+library(ggplot2)
+
+ce_sens_df<-read.csv("all_sensors_ce_records.csv")
+os_sens_df<-read.csv("all_sensors_os_records.csv")
+
+all_sens_df<-rbind(ce_sens_df, os_sens_df)
+
+
+sensor_info<-read.csv("sensor_info.csv")
+
+all_sens_info<-merge(all_sens_df, sensor_info, by.x = "sensor_id", by.y = "Sensor_no")
+
+all_sens_info$month<-months.Date(as.Date(all_sens_info$date))
+
+all_sens_info$month<-factor(all_sens_info$month, levels = month.name)
+
+all_sens_info$timestamp<-as.POSIXct(all_sens_info$timestamp)
+
+t <- strftime(all_sens_info$timestamp, format="%H:%M:%S")
+
+all_sens_info$time<-as.POSIXct(t, format="%H:%M:%S")
+
+all_sens_info<-all_sens_info[complete.cases(all_sens_info),]
+
+
+all_sens_info$Habitat<-as.character(all_sens_info$Habitat)
+
+#shifting anything before 6pm forwrd by a day
+all_sens_info[hour(all_sens_info$timestamp) < 18, ]$time<-all_sens_info[hour(all_sens_info$timestamp) < 18, ]$time +days(1)
+
+all_sens_info_night<-all_sens_info[all_sens_info$time < as.POSIXct(paste(Sys.Date()+1, " 06:00:00 GMT", sep="")),]
+
+all_sens_info_night <-all_sens_info_night %>%
+  group_by(sensor_id, month) %>%
+  mutate(count = n())%>%
+  ungroup
+
+give.n <- function(x){
+   #return(c(y = as.POSIXct(paste(Sys.Date(), "18:00:00", sep=" "), format = "%Y-%m-%d %H:%M:%S"), label = length(x)))
+  return(c(y = min(x), label = length(x)))
+}
+
+
+ggplot(all_sens_info_night, aes(x = month, y = time))+
+  geom_boxplot(aes(fill=Habitat))+
+  facet_wrap(.~sensor_id)+
+  labs(x = "Month", y = "Time")+
+  stat_summary(fun.data = give.n, geom = "text")+
+  scale_x_discrete(labels=month.abb[c(1,4,7,10)], breaks = c("January", "April", "July", "October")) +
+  theme_bw()
+
+```
+
+
+```{r}
+library(suncalc)
+
+QEOP_loc<-c(mean(unique(all_sens_info$Lat)), mean(unique(all_sens_info$Lon)))
+
+suntimes<-getSunlightTimes(lat = QEOP_loc[1], lon = QEOP_loc[2], date = as.Date(unique(all_sens_info$date)), keep = c("sunrise", "sunset"))
+
+suntimes$date<-as.Date(suntimes$date)
+all_sens_info_night$date<-as.Date(all_sens_info_night$date)
+
+df<-merge(suntimes, all_sens_info_night, by="date")
+df$sunrise <- strftime(df$sunrise, format="%H:%M:%S")
+df$sunrise <- as.POSIXct(df$sunrise, format="%H:%M:%S")
+
+ggplot(df, aes(x = month, y = time))+
+  geom_boxplot(aes(fill=Habitat))+ 
+  geom_line(aes(x = date, y = sunrise))
+
+
+ggplot(df, aes(x = date, y = sunrise))+
+  #geom_boxplot(aes(fill=Habitat))+ 
+  geom_line()
+
+
+
+
+```
+
+Narrative for each sensor:
+
+Bat sensor one
+
+```{r}
+
+###need to sort out sensor four 
+
+library(leaflet)
+library(htmltools)
+library(mapview)
+
+bat = makeIcon("bat.png", 36, 36)
+
+s1<-dplyr::filter(all_sens_info, sensor_id == 1)
+
+file_1<-'D:/Fiona/QEOP/data_archive/sensor_pics/sensor_1.png'
+file_2<-'D:/Fiona/QEOP/data_archive/sensor_pics/sensor_2.png'
+file_3<-'D:/Fiona/QEOP/data_archive/sensor_pics/sensor_3.png'
+file_4_1<-'D:/Fiona/QEOP/data_archive/sensor_pics/sensor_4_1.png'
+#file_4_2<-'D:/Fiona/QEOP/data_archive/sensor_pics/sensor_4_1.png'
+file_5<-'D:/Fiona/QEOP/data_archive/sensor_pics/sensor_5.png'
+file_6<-'D:/Fiona/QEOP/data_archive/sensor_pics/sensor_6.png'
+file_7<-'D:/Fiona/QEOP/data_archive/sensor_pics/sensor_7.png'
+file_8<-'D:/Fiona/QEOP/data_archive/sensor_pics/sensor_8.png'
+file_9<-'D:/Fiona/QEOP/data_archive/sensor_pics/sensor_9.png'
+file_10<-'D:/Fiona/QEOP/data_archive/sensor_pics/sensor_10.png'
+file_11<-'D:/Fiona/QEOP/data_archive/sensor_pics/sensor_11.png'
+file_12<-'D:/Fiona/QEOP/data_archive/sensor_pics/sensor_12.png'
+file_13<-'D:/Fiona/QEOP/data_archive/sensor_pics/sensor_13.png'
+file_14<-'D:/Fiona/QEOP/data_archive/sensor_pics/sensor_14.png'
+file_15<-'D:/Fiona/QEOP/data_archive/sensor_pics/sensor_15.png'
+
+content_1 <- paste(sep = "<br/>",
+               paste0("<b>Sensor 1: </b>"),
+               paste0("<b>Lamp post ID: </b>", "CP03"),
+               paste0("<b>Direction: </b>", "Towards grass"),
+               paste0("<b>Habitat: </b>", "Parkland"),
+               paste0("<b>Lighting: </b>", "Not directly onto grass, but directed into trees on path."),
+               paste0("<b>Light levels (Lux): : </b>", "On path 0.08; on grass 0.01."))
+
+content_2 <- paste(sep = "<br/>",
+               paste0("<b>Sensor 2: </b>"),
+               paste0("<b>Lamp post ID: </b>", "TC472"),
+               paste0("<b>Direction: </b>", "Facing towards the river"),
+               paste0("<b>Habitat: </b>", "Water"))
+
+content_3 <- paste(sep = "<br/>",
+               paste0("<b>Sensor 3: </b>"),
+               paste0("<b>Lamp post ID: </b>", "C92A"),
+               paste0("<b>Direction: </b>", "Towards grass bank, away from road"),
+               paste0("<b>Habitat: </b>", "Grassland"))
+
+content_4_1 <- paste(sep = "<br/>",
+               paste0("<b>Sensor 4: </b>"),
+               paste0("<b>Lamp post ID: </b>", "TC327"),
+               paste0("<b>Direction: </b>", "Towards allotments"),
+               paste0("<b>Habitat: </b>", "Grassland"))
+
+content_5 <- paste(sep = "<br/>",
+               paste0("<b>Sensor 5: </b>"),
+               paste0("<b>Lamp post ID: </b>", "H"),
+               paste0("<b>Direction: </b>", "Away from river"),
+               paste0("<b>Habitat: </b>", "Grassland"),
+               paste0("<b>Lighting: </b>", "Light directed onto path. Spill onto river. Spotlight, probably not LED."),
+               paste0("<b>Light levels (Lux): : </b>", "0.04-0.09 on path under light, 0.014 behind light on grass verge."))
+
+content_6 <- paste(sep = "<br/>",
+               paste0("<b>Sensor 6: </b>"),
+               paste0("<b>CCTV post: </b>", "H"),
+               paste0("<b>Direction: </b>", "Towards river"),
+               paste0("<b>Habitat: </b>", "Water"))
+
+content_7 <- paste(sep = "<br/>",
+               paste0("<b>Sensor 7: </b>"),
+               paste0("<b>Lamp post: </b>", "CA13"),
+               paste0("<b>Direction: </b>", "Towards river"),
+               paste0("<b>Habitat: </b>", "Water"))
+
+content_8 <- paste(sep = "<br/>",
+               paste0("<b>Sensor 8: </b>"),
+               paste0("<b>Lamp post: </b>", "TC244"),
+               paste0("<b>Direction: </b>", "Towards river"),
+               paste0("<b>Habitat: </b>", "Water"))
+
+content_9 <- paste(sep = "<br/>",
+               paste0("<b>Sensor 9: </b>"),
+               paste0("<b>Lamp post: </b>", "LS61"),
+               paste0("<b>Direction: </b>", "Towards trees away from path"),
+               paste0("<b>Habitat: </b>", "Trees"))
+
+content_10 <- paste(sep = "<br/>",
+               paste0("<b>Sensor 10: </b>"),
+               paste0("<b>Lamp post: </b>", "TC508"),
+               paste0("<b>Direction: </b>", "Towards stadium across grass and tree area"),
+               paste0("<b>Habitat: </b>", "Grassland"),
+               paste0("<b>Lighting: </b>", "Grassland area reasonably dark."),
+               paste0("<b>Light levels (Lux): : </b>", "0.05 on path. 0.02 immediately behind lamppost on grass. <br> 0.01 4m behind lamppost on grass. 0.003 10m behind lamppost on grass. "))
+
+content_11 <- paste(sep = "<br/>",
+               paste0("<b>Sensor 11: </b>"),
+               paste0("<b>Lamp post: </b>", "CDM3832"),
+               paste0("<b>Direction: </b>", "Facing across grass mound away from trees"),
+               paste0("<b>Habitat: </b>", "Parkland"))
+
+content_12 <- paste(sep = "<br/>",
+               paste0("<b>Sensor 12: </b>"),
+               paste0("<b>Lamp post: </b>", "LS64"),
+               paste0("<b>Direction: </b>", "Facing south, across tree and grass area"),
+               paste0("<b>Habitat: </b>", "Grassland"),
+               paste0("<b>Lighting: </b>", "Continuous brightness to the side"),
+               paste0("<b>Light levels (Lux): : </b>", "0.036 on track. 0.02 directly behind lamppost on grass.<br> 0.012 3m behind. 0.008 5m behind. 0.003 on flat grass, 10m. 15-20m to edge if spill."))
+
+content_13 <- paste(sep = "<br/>",
+               paste0("<b>Sensor 13: </b>"),
+               paste0("<b>Lamp post: </b>", "LD07"),
+               paste0("<b>Direction: </b>", "Facing towards the grass away from the path"),
+               paste0("<b>Habitat: </b>", "Grassland"))
+
+content_14 <- paste(sep = "<br/>",
+               paste0("<b>Sensor 14: </b>"),
+               paste0("<b>Lamp post: </b>", "LS85"),
+               paste0("<b>Direction: </b>", "Towards trees"),
+               paste0("<b>Habitat: </b>", "Trees"),
+               paste0("<b>Lighting: </b>", "Very dark on other side of bank"),
+               paste0("<b>Light levels (Lux): : </b>", "0.051 directly underneath. 0.045 beside.<br> 0.025 2m behind lamppost on grass. 0.016 5m behind. 0.006 7m behind."))
+
+content_15 <- paste(sep = "<br/>",
+               paste0("<b>Sensor 15: </b>"),
+               paste0("<b>Lamp post: </b>", "LS31"),
+               paste0("<b>Direction: </b>", "Facing towards the bridge across the grass area"),
+               paste0("<b>Habitat: </b>", "Parkland"))
+
+m <- leaflet() %>%
+  addTiles() %>%  
+  addMarkers(lng=all_sens_info[all_sens_info$sensor_id == 1, ]$Lon[1], lat=all_sens_info[all_sens_info$sensor_id == 1, ]$Lat[1], popup=popupImage(file_1), icon = bat, label =  htmltools::HTML(content_1), labelOptions = labelOptions(direction = "bottom"))%>%  
+  addMarkers(lng=all_sens_info[all_sens_info$sensor_id == 2, ]$Lon[1], lat=all_sens_info[all_sens_info$sensor_id == 2, ]$Lat[1], popup=popupImage(file_2), icon = bat, label =  htmltools::HTML(content_2), labelOptions = labelOptions(direction = "bottom")) %>%
+  addMarkers(lng=all_sens_info[all_sens_info$sensor_id == 3, ]$Lon[1], lat=all_sens_info[all_sens_info$sensor_id == 3, ]$Lat[1], popup=popupImage(file_3), icon = bat, label =  htmltools::HTML(content_3), labelOptions = labelOptions(direction = "bottom")) %>%
+  addMarkers(lng=all_sens_info[all_sens_info$sensor_id == 4, ]$Lon[1], lat=all_sens_info[all_sens_info$sensor_id == 4, ]$Lat[1], popup=popupImage(file_4_1), icon = bat, label =  htmltools::HTML(content_4_1), labelOptions = labelOptions(direction = "bottom")) %>%
+    # addMarkers(lng=all_sens_info[all_sens_info$sensor_id == 4, ]$Lon[1], lat=all_sens_info[all_sens_info$sensor_id == 4, ]$Lat[1], popup=popupImage(file_4_2), icon = bat, label =  htmltools::HTML(content_4_2), labelOptions = labelOptions(direction = "bottom")) %>%
+  addMarkers(lng=all_sens_info[all_sens_info$sensor_id == 5, ]$Lon[1], lat=all_sens_info[all_sens_info$sensor_id == 5, ]$Lat[1], popup=popupImage(file_5), icon = bat, label =  htmltools::HTML(content_5), labelOptions = labelOptions(direction = "bottom")) %>%
+  addMarkers(lng=all_sens_info[all_sens_info$sensor_id == 6, ]$Lon[1], lat=all_sens_info[all_sens_info$sensor_id == 6, ]$Lat[1], popup=popupImage(file_6), icon = bat, label =  htmltools::HTML(content_6), labelOptions = labelOptions(direction = "bottom")) %>%
+  addMarkers(lng=all_sens_info[all_sens_info$sensor_id == 7, ]$Lon[1], lat=all_sens_info[all_sens_info$sensor_id == 7, ]$Lat[1], popup=popupImage(file_7), icon = bat, label =  htmltools::HTML(content_7), labelOptions = labelOptions(direction = "bottom")) %>%
+  addMarkers(lng=all_sens_info[all_sens_info$sensor_id == 8, ]$Lon[1], lat=all_sens_info[all_sens_info$sensor_id == 8, ]$Lat[1], popup=popupImage(file_8), icon = bat, label =  htmltools::HTML(content_8), labelOptions = labelOptions(direction = "bottom")) %>%
+  addMarkers(lng=all_sens_info[all_sens_info$sensor_id == 9, ]$Lon[1], lat=all_sens_info[all_sens_info$sensor_id == 9, ]$Lat[1], popup=popupImage(file_9), icon = bat, label =  htmltools::HTML(content_9), labelOptions = labelOptions(direction = "bottom")) %>%
+  addMarkers(lng=all_sens_info[all_sens_info$sensor_id == 10, ]$Lon[1], lat=all_sens_info[all_sens_info$sensor_id == 10, ]$Lat[1], popup=popupImage(file_10), icon = bat, label =  htmltools::HTML(content_10), labelOptions = labelOptions(direction = "bottom")) %>%
+  addMarkers(lng=all_sens_info[all_sens_info$sensor_id == 11, ]$Lon[1], lat=all_sens_info[all_sens_info$sensor_id == 11, ]$Lat[1], popup=popupImage(file_11), icon = bat, label =  htmltools::HTML(content_11), labelOptions = labelOptions(direction = "bottom")) %>%
+  addMarkers(lng=all_sens_info[all_sens_info$sensor_id == 12, ]$Lon[1], lat=all_sens_info[all_sens_info$sensor_id == 12, ]$Lat[1], popup=popupImage(file_12), icon = bat, label =  htmltools::HTML(content_12), labelOptions = labelOptions(direction = "bottom")) %>%
+  addMarkers(lng=all_sens_info[all_sens_info$sensor_id == 13, ]$Lon[1], lat=all_sens_info[all_sens_info$sensor_id == 13, ]$Lat[1], popup=popupImage(file_13), icon = bat, label =  htmltools::HTML(content_13), labelOptions = labelOptions(direction = "bottom")) %>%
+  addMarkers(lng=all_sens_info[all_sens_info$sensor_id == 14, ]$Lon[1], lat=all_sens_info[all_sens_info$sensor_id == 14, ]$Lat[1], popup=popupImage(file_14), icon = bat, label =  htmltools::HTML(content_14), labelOptions = labelOptions(direction = "bottom")) %>%
+  addMarkers(lng=all_sens_info[all_sens_info$sensor_id == 15, ]$Lon[1], lat=all_sens_info[all_sens_info$sensor_id == 15, ]$Lat[1], popup=popupImage(file_15), icon = bat, label =  htmltools::HTML(content_15), labelOptions = labelOptions(direction = "bottom"))
+
+m
+
+```
+
+
+
