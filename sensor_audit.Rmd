@@ -25,7 +25,9 @@ Reading in the data from the CE Tools Server:
 
 ```{r}
 
-dump<-read.table("qeop_dump_all.csv", fill=T, sep=",")
+#dump<-read.table("qeop_dump_all.csv", fill=T, sep=",")
+
+dump<-read.table("qeop_dump_2019_02_23.csv", fill=T, sep=",")
 
 ##adding in a column to identify each row with a sensor
 
@@ -226,11 +228,15 @@ all_sensors_merge<-all_sensors_merge %>%
 
 
 #save(all_sensors_merge, file = "all_sensor_data_2017-07-12_2019-2019_01_14")
+#save(all_sensors_merge, file = "all_sensor_data_2017_07_12-2019_02_23")
+
+
 ```
 
 ```{r}
 
-load("all_sensor_data_2017-07-12_2019-2019_01_14")
+#load("all_sensor_data_2017-07-12_2019-2019_01_14")
+load("all_sensor_data_2017_07_12-2019_02_23")
 
 ```
 
@@ -256,22 +262,44 @@ ggplot(all_sensors_merge, aes(x = date, y = sensor_no, group = sensor_no))+
 
 ```
 
-
-
-```{r, eval = FALSE, echo = FALSE}
+```{r}
 ggplot(all_sensors_merge, aes(x = date, y = sensor_no, group = sensor_no))+
-  geom_line(aes(size = count, col= server))+
+  geom_line(color = "steelblue",aes(size = count))+
   scale_y_reverse(breaks = seq(1, 16, by = 1))+
   scale_x_date(date_breaks = "1 month", date_labels = "%m-%Y")+
   theme_bw()+
+  #theme(panel.background = element_blank())+
   theme(axis.text.y = element_text(lineheight = 0.5 , size = 18),
-        axis.text.x = element_text(size = 14, angle = 45, hjust = 1),
+        axis.text.x = element_text(size = 14, angle= 45, hjust = 1),
         axis.title.x = element_text(size = 20),
         axis.title.y = element_text(size = 20),
         legend.text=element_text(size=18),
         legend.title=element_text(size=20))+
   labs(x = "Date", y = "Sensor No.", linetype = "test")+
-  guides(colour = "none", size = guide_legend(title ="Detections\n(Log10)"))
+  #scale_fill_continuous(breaks = c(0,1,2,3,4), labels = c("1","10", "100","1000","10000"), guide =guide_legend(title ="Detections\n(Log10)"))
+ # scale_size_continuous(breaks = c(0,1,2,3,4),labels = c("1","10","100", "1000", "10000"))+
+  guides(size = guide_legend(title ="Detections"))
+
+```
+
+
+```{r, eval = FALSE, echo = FALSE}
+ggplot(all_sensors_merge[all_sensors_merge$sensor_no == 5,], aes(x = date, y = sensor_no, group = sensor_no))+
+  geom_line(color = "steelblue",aes(size = count))+
+  #scale_y_reverse(breaks = seq(1, 16, by = 1))+
+  scale_x_date(date_breaks = "1 month", date_labels = "%m-%Y")+
+  theme_bw()+
+  #theme(panel.background = element_blank())+
+  theme(axis.text.y = element_text(lineheight = 0.5 , size = 18),
+        axis.text.x = element_text(size = 14, angle= 45, hjust = 1),
+        axis.title.x = element_text(size = 20),
+        axis.title.y = element_text(size = 20),
+        legend.text=element_text(size=18),
+        legend.title=element_text(size=20))+
+  labs(x = "Date", y = "Sensor No.", linetype = "test")+
+  #scale_fill_continuous(breaks = c(0,1,2,3,4), labels = c("1","10", "100","1000","10000"), guide =guide_legend(title ="Detections\n(Log10)"))
+ # scale_size_continuous(breaks = c(0,1,2,3,4),labels = c("1","10","100", "1000", "10000"))+
+  guides(size = guide_legend(title ="Detections"))
 
 ```
 
@@ -333,16 +361,26 @@ ce_tool_out<-function(ce_dir){
   return(df)
 }
 
-all_df<-lapply(ce_dirs, ce_tool_out)
+ce_df<-lapply(ce_dirs, ce_tool_out)
 
-all_sens_df<-do.call("rbind", all_df)
+ce_sens_df<-do.call("rbind", ce_df)
 
 
-all_sens_df$date<-as.Date(all_sens_df$timestamp)
+ce_sens_df$date<-as.Date(ce_sens_df$timestamp)
 
-all_sens_df$time<-format(all_sens_df$timestamp, "%H:%M:%S")
+ce_sens_df$time<-format(ce_sens_df$timestamp, "%H:%M:%S")
 
-#write.csv(all_sens_df, "all_sensors_all_records.csv", row.names = FALSE)
+#write.csv(ce_sens_df, "all_sensors_ce_records.csv", row.names = FALSE)
+
+```
+
+```{r}
+
+open_sensors<-data.frame(dump[,c("sensor","datetime","time","prob_bat", "date", "time")])
+colnames(open_sensors)<-colnames(ce_sens_df)
+open_sensors$sensor_id<- gsub("[^0-9.]", "", open_sensors$sensor_id)
+
+#write.csv(open_sensors, "all_sensors_os_records.csv", row.names = FALSE)
 
 ```
 
@@ -354,7 +392,11 @@ library(scales)
 library(lubridate)
 library(ggplot2)
 
-all_sens_df<-read.csv("all_sensors_all_records.csv")
+ce_sens_df<-read.csv("all_sensors_ce_records.csv")
+os_sens_df<-read.csv("all_sensors_os_records.csv")
+
+all_sens_df<-rbind(ce_sens_df, os_sens_df)
+
 
 sensor_info<-read.csv("sensor_info.csv")
 
@@ -372,7 +414,6 @@ all_sens_info$time<-as.POSIXct(t, format="%H:%M:%S")
 
 all_sens_info<-all_sens_info[complete.cases(all_sens_info),]
 
-########trying it out with all data 
 
 all_sens_info$Habitat<-as.character(all_sens_info$Habitat)
 
@@ -381,10 +422,22 @@ all_sens_info[hour(all_sens_info$timestamp) < 18, ]$time<-all_sens_info[hour(all
 
 all_sens_info_night<-all_sens_info[all_sens_info$time < as.POSIXct(paste(Sys.Date()+1, " 06:00:00 GMT", sep="")),]
 
+all_sens_info_night <-all_sens_info_night %>%
+  group_by(sensor_id, month) %>%
+  mutate(count = n())%>%
+  ungroup
+
+give.n <- function(x){
+   #return(c(y = as.POSIXct(paste(Sys.Date(), "18:00:00", sep=" "), format = "%Y-%m-%d %H:%M:%S"), label = length(x)))
+  return(c(y = min(x), label = length(x)))
+}
+
+
 ggplot(all_sens_info_night, aes(x = month, y = time))+
   geom_boxplot(aes(fill=Habitat))+
   facet_wrap(.~sensor_id)+
   labs(x = "Month", y = "Time")+
+  stat_summary(fun.data = give.n, geom = "text")+
   scale_x_discrete(labels=month.abb[c(1,4,7,10)], breaks = c("January", "April", "July", "October")) +
   theme_bw()
 
