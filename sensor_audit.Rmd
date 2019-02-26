@@ -437,7 +437,7 @@ ggplot(all_sens_info_night, aes(x = month, y = time))+
   geom_boxplot(aes(fill=Habitat))+
   facet_wrap(.~sensor_id)+
   labs(x = "Month", y = "Time")+
-  stat_summary(fun.data = give.n, geom = "text")+
+  #stat_summary(fun.data = give.n, geom = "text")+
   scale_x_discrete(labels=month.abb[c(1,4,7,10)], breaks = c("January", "April", "July", "October")) +
   theme_bw()
 
