@@ -724,25 +724,25 @@ suntimes<-getSunlightTimes(lat = QEOP_loc[1], lon = QEOP_loc[2], date = unique(a
 
 suntimes$date<-as.Date(suntimes$date)
 
-suntimes$sunrise<-if_else(suntimes$date > as.Date("2017-10-27") | (suntimes$date > as.Date("2018-03-25") & suntimes$date < as.Date("2018-10-29")), suntimes$sunrise - 3600 , suntimes$sunrise)
+suntimes$sunrise<-if_else(suntimes$date < as.Date("2017-10-29") | (suntimes$date > as.Date("2018-03-24") & suntimes$date < as.Date("2018-10-28")), suntimes$sunrise - 3600 , suntimes$sunrise)
 
-suntimes$sunset<-if_else(suntimes$date > as.Date("2017-10-27") | (suntimes$date > as.Date("2018-03-25") & suntimes$date < as.Date("2018-10-29")), suntimes$sunset - 3600 , suntimes$sunset)
+suntimes$sunset<-if_else(suntimes$date < as.Date("2017-10-29") | (suntimes$date > as.Date("2018-03-24") & suntimes$date < as.Date("2018-10-28")), suntimes$sunset - 3600 , suntimes$sunset)
 
 
 suntimes$date<-as.Date(suntimes$date)
 all_sens_info$date<-as.Date(all_sens_info$date)
 
 df<-merge(suntimes, all_sens_info, by="date")
-#df$sunrise <- strftime(df$sunrise, format="%H:%M:%S")
+df$sunrise <- strftime(df$sunrise, format="%H:%M:%S")
 df$sunrise <- as.POSIXct(df$sunrise, format="%H:%M:%S")
 
 ggplot(df, aes(x = date, y = sunrise))+
   #geom_boxplot(aes(fill=Habitat))+ 
   geom_line()
 
-df$sunset_diff<-  as.numeric(df$sunset - df$timestamp)
+#df$sunset_diff<-  as.numeric(df$sunset - df$timestamp)
 
-hist(df$sunset_diff/3600, main = "", xlab = "Hours Since Sunset")
+#hist(df$sunset_diff/3600, main = "", xlab = "Hours Since Sunset")
 
 
 ```
