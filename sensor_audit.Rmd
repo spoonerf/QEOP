@@ -89,8 +89,8 @@ days_active$server<-"CE Tools"
 
 Most of the daily data are saved in individual folders, data between 24th October 2017 and 9th May 2018 are grouped together into 6 folders. This code creates new folders for each date between 24th Oct and 9th May
 
-```{r, eval = FALSE}
-lf<-list.files(paste(here(),"/data_archive/opensensors_Daniyar/qeoplogs_more", sep=""))
+```{r}
+lf<-list.files(paste(here::here(),"/data_archive/opensensors_Daniyar/qeoplogs_more", sep=""))
 
 #subsetting folders with more than 10 chars
 lf_gr<-lf[nchar(lf)>10]
@@ -104,8 +104,8 @@ mdays<-seq(min(fol_ds), max(fol_ds),by="days")
 ```{r, message=FALSE, eval=FALSE}
 dir_maker<-function(mday){
   
-  if (!dir.exists(paste(here(),"/data_archive/opensensors_Daniyar/qeoplogs_more/",mday, sep=""))){
-    dir.create(path = paste(here(),"/data_archive/opensensors_Daniyar/qeoplogs_more/",mday, sep=""))
+  if (!dir.exists(paste(here::here(),"/data_archive/opensensors_Daniyar/qeoplogs_more/",mday, sep=""))){
+    dir.create(path = paste(here::here(),"/data_archive/opensensors_Daniyar/qeoplogs_more/",mday, sep=""))
   }
     }
 lapply(mdays, dir_maker)
@@ -119,7 +119,7 @@ This code breaks up the .csv files by date and sensor, saves a file for each sen
 
 fold_split<-function(fol_name){
   
-  fp<-paste(here(),"/data_archive/opensensors_Daniyar/qeoplogs_more/", fol_name, sep="" )
+  fp<-paste(here::here(),"/data_archive/opensensors_Daniyar/qeoplogs_more/", fol_name, sep="" )
   fpl<-list.files(fp)
   lapply(fpl, file_split, fp = fp)
 }
@@ -133,13 +133,11 @@ file_split<-function(file_name, fp){
   spl_csv$datetime<-anytime(spl_csv$timestamp/1000)#have to divide by 1000 as the numbers are stored to capture milliseconds
   spl_csv$date<-anydate(spl_csv$timestamp/1000)#have to divide by 1000 as the numbers are stored to capture milliseconds
   sp_df<-split(spl_csv, spl_csv$date)
-  lapply(names(sp_df),function(x){write.csv(sp_df[[x]],file = paste(here(),"/data_archive/opensensors_Daniyar/qeoplogs_more/", sp_df[[x]]$date[1],"/","bat",sensor_no, ".csv", sep="" ),row.names = FALSE)})
+  lapply(names(sp_df),function(x){write.csv(sp_df[[x]],file = paste(here::here(),"/data_archive/opensensors_Daniyar/qeoplogs_more/", sp_df[[x]]$date[1],"/","bat",sensor_no, ".csv", sep="" ),row.names = FALSE)})
   
 }
 
 lapply(lf_gr, fold_split)
-
-
 
 
 ```
@@ -154,7 +152,7 @@ lf<-lf[nchar(lf) <=10]
 sensor_count<-function(file, dir_id){
   
   sensor_no<-as.numeric(gsub("[^0-9.]", "",  file))
-  count<-file.nrow(paste(here(), "/data_archive/opensensors_Daniyar/qeoplogs_more/", dir_id,"/", file,sep="")) #gives warning
+  count<-file.nrow(paste(here::here(), "/data_archive/opensensors_Daniyar/qeoplogs_more/", dir_id,"/", file,sep="")) #gives warning
   #count<-length(readr::count_fields(paste(here(), "/data_archive/opensensors_Daniyar/qeoplogs_more/", dir_id,"/", file,sep=""), tokenizer = readr::tokenizer_csv()))
 
   #remove file header if the file is a csv
@@ -167,7 +165,7 @@ sensor_count<-function(file, dir_id){
   }
 
 dir_count<-function(dir_id){
-  files<-list.files(paste(here(), "/data_archive/opensensors_Daniyar/qeoplogs_more/", dir_id, sep=""))
+  files<-list.files(paste(here::here(), "/data_archive/opensensors_Daniyar/qeoplogs_more/", dir_id, sep=""))
   dir_out<-lapply(files, sensor_count, dir_id = dir_id)
   do.call("rbind", dir_out)
 }
@@ -232,7 +230,7 @@ all_sensors_merge<-all_sensors_merge %>%
 
 
 #save(all_sensors_merge, file = "all_sensor_data_2017-07-12_2019-2019_01_14")
-#save(all_sensors_merge, file = "all_sensor_data_2017_07_12-2019_02_23b")
+save(all_sensors_merge, file = "all_sensor_data_2017_07_12-2019_02_23b")
 
 
 ```
@@ -451,10 +449,17 @@ kable(
 
 ```{r, eval= FALSE , echo = FALSE}
 
+library(stringr)
+
 ce_dirs<-list.dirs(here::here("data_archive/opensensors_Daniyar/qeoplogs_more/"))
 
-#getting rid of the folders with multiple dates in 
-ce_dirs<-ce_dirs[nchar(ce_dirs)==71]
+getmode<-function(v){
+  uniqv<-unique(v)
+  uniqv[which.max(tabulate(match(v, uniqv)))]
+}
+
+#getting rid of the folders with multiple dates in - removing anything which doesn't have the modal average number of characters. Bit shaky but okay for now.
+ce_dirs<-ce_dirs[nchar(ce_dirs)==getmode(nchar(ce_dirs))]
 
 df<-data.frame()
 
@@ -474,15 +479,17 @@ ce_tool_out<-function(ce_dir){
       } 
     
       if (grepl(".txt", file)) {
-         df_temp = read.table(paste(ce_dir,"/", file, sep=""), sep=",", fill= TRUE)
+         df_temp = read.table(paste(ce_dir,"/", file, sep=""), sep=":")
          df_out<-data.frame(sensor_id = numeric(nrow(df_temp)), timestamp = character(nrow(df_temp)), call_time = numeric(nrow(df_temp)), prob_bat = numeric(nrow(df_temp)),c1 = character(nrow(df_temp)), p1 = numeric(nrow(df_temp)) )
          df_out$sensor_id<-as.numeric(gsub("\\D", "", file))
          df_out$timestamp<-as.POSIXct(gsub("[^0-9.]", "", paste(df_temp$V3, df_temp$V4,df_temp$V5,df_temp$V6,df_temp$V7,df_temp$V8, sep=".")), format = ".%Y.%m.%d.%H.%M.%S")
-         df_out$call_time<-as.numeric(gsub("[^0-9.]", "", df_temp[,ncol(df_temp)-7]))
-         df_out$prob_bat<-as.numeric(gsub("[^0-9.]", "", df_temp[, ncol(df_temp)-6]))
-         df_out$c1<-str_trim(as.character(gsub("c1: ", "",df_temp[, ncol(df_temp)-5])))
-         df_out$p1<-as.numeric(gsub("p1: ", "",df_temp[, ncol(df_temp)-4]))
-         #df_out<-df_temp[,c("sensor_id","timestamp", "call_time", "prob_bat", "c1", "p1")]
+         
+         df_out$call_time<-as.numeric(gsub("[^0-9.]", "", df_temp$V6))
+         df_out$prob_bat<-as.numeric(gsub(", c1", "", df_temp$V7))
+         
+         df_out$c1<-str_trim(gsub(", p1", "", df_temp$V8))
+         df_out$p1<-gsub(", c2", "", df_temp$V9)
+         #df_temp<-df_temp[,c("sensor_id","timestamp", "call_time", "prob_bat", "c1", "p1")]
         }
          
          df = rbind(df, df_out)
@@ -562,6 +569,8 @@ all_sens_info[as.Date(as.character(all_sens_info$date)) > as.Date(as.character("
   filter(as.Date(as.character(date)) > as.Date("2018-05-14") & sensor_id == 4)%>%
   mutate(deployment=replace(deployment, deployment==1, 2), Lat = replace(Lat, Lat==51.5367, 51.536553), Lon = replace(Lon, Lon==-0.0128, -0.013169))
 
+all_sens_info %>%
+filter(sensor_id == 4 & date >= as.Date("2018-05-14"))
 
 all_sens_info[as.Date(as.character(all_sens_info$date)) > as.Date("2018-08-07") & all_sens_info$sensor_id == 5,]<-all_sens_info %>%
   filter(as.Date(as.character(date)) > as.Date("2018-08-07") & sensor_id == 5)%>%
