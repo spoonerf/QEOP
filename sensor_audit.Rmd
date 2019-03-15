@@ -469,28 +469,23 @@ ce_tool_out<-function(ce_dir){
          df_temp$timestamp<-as.numeric(as.character(df_temp$timestamp))
          df_temp$timestamp<-anytime(df_temp$timestamp/1000)
          
-         df_temp<-df_temp[,c("sensor_id","timestamp", "call_time", "prob_bat", "c1", "p1")]
+         df_out<-df_temp[,c("sensor_id","timestamp", "call_time", "prob_bat", "c1", "p1")]
          
       } 
     
       if (grepl(".txt", file)) {
          df_temp = read.table(paste(ce_dir,"/", file, sep=""), sep=",", fill= TRUE)
-         
-         if (df_temp$v24 == ""){
-           
-           
-           
-         }
-         df_temp$sensor_id<-as.numeric(gsub("\\D", "", file))
-         df_temp$timestamp<-as.POSIXct(gsub("[^0-9.]", "", paste(df_temp$V3, df_temp$V4,df_temp$V5,df_temp$V6,df_temp$V7,df_temp$V8, sep=".")), format = ".%Y.%m.%d.%H.%M.%S")
-         df_temp$call_time<-as.numeric(gsub("[^0-9.]", "", df_temp$V17))
-         df_temp$prob_bat<-as.numeric(gsub("[^0-9.]", "", df_temp$V18))
-         df_temp$c1<-str_trim(as.character(gsub("c1: ", "",df_temp$V19)))
-         df_temp$p1<-as.numeric(gsub("p1: ", "",df_temp$V20))
-         df_temp<-df_temp[,c("sensor_id","timestamp", "call_time", "prob_bat", "c1", "p1")]
+         df_out<-data.frame(sensor_id = numeric(nrow(df_temp)), timestamp = character(nrow(df_temp)), call_time = numeric(nrow(df_temp)), prob_bat = numeric(nrow(df_temp)),c1 = character(nrow(df_temp)), p1 = numeric(nrow(df_temp)) )
+         df_out$sensor_id<-as.numeric(gsub("\\D", "", file))
+         df_out$timestamp<-as.POSIXct(gsub("[^0-9.]", "", paste(df_temp$V3, df_temp$V4,df_temp$V5,df_temp$V6,df_temp$V7,df_temp$V8, sep=".")), format = ".%Y.%m.%d.%H.%M.%S")
+         df_out$call_time<-as.numeric(gsub("[^0-9.]", "", df_temp[,ncol(df_temp)-7]))
+         df_out$prob_bat<-as.numeric(gsub("[^0-9.]", "", df_temp[, ncol(df_temp)-6]))
+         df_out$c1<-str_trim(as.character(gsub("c1: ", "",df_temp[, ncol(df_temp)-5])))
+         df_out$p1<-as.numeric(gsub("p1: ", "",df_temp[, ncol(df_temp)-4]))
+         #df_out<-df_temp[,c("sensor_id","timestamp", "call_time", "prob_bat", "c1", "p1")]
         }
          
-         df = rbind(df, df_temp)
+         df = rbind(df, df_out)
          print(paste(ce_dir, file, sep="/"))
         
           }
