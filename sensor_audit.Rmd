@@ -451,7 +451,7 @@ kable(
 
 library(stringr)
 
-ce_dirs<-list.dirs(here::here("data_archive/opensensors_Daniyar/qeoplogs_more/"))
+os_dirs<-list.dirs(here::here("data_archive/opensensors_Daniyar/qeoplogs_more/"))
 
 getmode<-function(v){
   uniqv<-unique(v)
@@ -459,17 +459,17 @@ getmode<-function(v){
 }
 
 #getting rid of the folders with multiple dates in - removing anything which doesn't have the modal average number of characters. Bit shaky but okay for now.
-ce_dirs<-ce_dirs[nchar(ce_dirs)==getmode(nchar(ce_dirs))]
+os_dirs<-os_dirs[nchar(os_dirs)==getmode(nchar(os_dirs))]
 
 df<-data.frame()
 
-ce_tool_out<-function(ce_dir){
-  file_list<-list.files(ce_dir)
+os_tool_out<-function(os_dir){
+  file_list<-list.files(os_dir)
   
   for (file in file_list){
          
       if(grepl(".csv", file)){
-         df_temp = read.table(paste(ce_dir,"/", file, sep=""), sep=",", header = T, stringsAsFactors = F)
+         df_temp = read.table(paste(os_dir,"/", file, sep=""), sep=",", header = T, stringsAsFactors = F)
          df_temp$sensor_id<-as.numeric(gsub("\\D", "", file))
          df_temp$timestamp<-as.numeric(as.character(df_temp$timestamp))
          df_temp$timestamp<-anytime(df_temp$timestamp/1000)
@@ -479,35 +479,62 @@ ce_tool_out<-function(ce_dir){
       } 
     
       if (grepl(".txt", file)) {
-         df_temp = read.table(paste(ce_dir,"/", file, sep=""), sep=":")
-         df_out<-data.frame(sensor_id = numeric(nrow(df_temp)), timestamp = character(nrow(df_temp)), call_time = numeric(nrow(df_temp)), prob_bat = numeric(nrow(df_temp)),c1 = character(nrow(df_temp)), p1 = numeric(nrow(df_temp)) )
-         df_out$sensor_id<-as.numeric(gsub("\\D", "", file))
-         df_out$timestamp<-as.POSIXct(gsub("[^0-9.]", "", paste(df_temp$V3, df_temp$V4,df_temp$V5,df_temp$V6,df_temp$V7,df_temp$V8, sep=".")), format = ".%Y.%m.%d.%H.%M.%S")
+         #df_temp = read.table(paste(ce_dir,"/", file, sep=""))
+         df_temp = read.csv(paste(os_dir,"/", file, sep=""), header = FALSE)
+         cols<-paste("V", 1:ncol(df_temp), sep="")
+         df_temp$x <- apply( df_temp[ , cols ] , 1 , paste , collapse = "." )
          
-         df_out$call_time<-as.numeric(gsub("[^0-9.]", "", df_temp$V6))
-         df_out$prob_bat<-as.numeric(gsub(", c1", "", df_temp$V7))
+         spl<-strsplit(df_temp$x, " ")
          
-         df_out$c1<-str_trim(gsub(", p1", "", df_temp$V8))
-         df_out$p1<-gsub(", c2", "", df_temp$V9)
-         #df_temp<-df_temp[,c("sensor_id","timestamp", "call_time", "prob_bat", "c1", "p1")]
+         get_neat_os_data<-function(x){
+           
+             sensor_id<-gsub("[^0-9]", "", x[which(grepl("sensor_bat",x))])
+             
+             time_stamp<-gsub("[^0-9.]", "",paste(x[which(x== "timestamp:")+1],x[which(x== "timestamp:")+2],x[which(x== "timestamp:")+3],x[which(x== "timestamp:")+4], sep=""))
+             
+             time_stamp<-toString(strsplit(time_stamp, "[.]")[[1]][2:7])
+             
+             time_stamp<-as.POSIXct(time_stamp, format = "%Y, %m, %d, %H, %M, %S")
+              
+             call_time<-x[which(x == "call_time:")+1]
+             call_time<-as.numeric(substr(call_time, 1, nchar(call_time)-1)) 
+             
+             prob_bat<- x[which(x == "prob_bat:")+1]
+             prob_bat<-as.numeric(substr(prob_bat, 1, nchar(prob_bat)-1))  
+              
+             genus<-gsub("'","",x[which(x == "c1:")+1])
+             spec<-gsub("[[:punct:]]","",x[which(x == "c1:")+2])
+             
+             c1<-paste(genus, spec, sep = " ")
+             
+             p1<- x[which(x == "p1:")+1]
+             p1<-as.numeric(substr(p1, 1, nchar(p1)-1)) 
+             
+             df_out<-data.frame(sensor_id,time_stamp, call_time, prob_bat, c1, p1)
+             print(df_out)
+         return(df_out)
+         }
+         
+         data_out<-lapply(spl,get_neat_os_data)
+         
         }
          
          df = rbind(df, df_out)
-         print(paste(ce_dir, file, sep="/"))
+         print(paste(os_dir, file, sep="/"))
         
           }
   
   return(df)
 }
 
-ce_df<-lapply(ce_dirs, ce_tool_out)
+os_df<-lapply(os_dirs, os_tool_out)
 
-ce_sens_df<-do.call("rbind", ce_df)
+os_sens_df<-do.call("rbind", os_df)
 
 
-ce_sens_df$date<-as.Date(ce_sens_df$timestamp)
+os_sens_df$date<-as.Date(os_sens_df$timestamp)
 
-ce_sens_df$time<-format(ce_sens_df$timestamp, "%H:%M:%S")
+os_sens_df$time<-format(os_sens_df$timestamp, "%H:%M:%S")
 
 #write.csv(ce_sens_df, "all_sensors_ce_records.csv", row.names = FALSE)
 
