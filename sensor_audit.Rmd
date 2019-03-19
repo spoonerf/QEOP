@@ -47,22 +47,24 @@ table(dump$sensor)
 Removing redundant rows and the classification data as it is not relevant here:
 
 ```{r, eval = FALSE}
-dump<-dump[,c(1,2,4,5,6,ncol(dump))]
+dump<-dump[,c(1,2,4,5,6,13,ncol(dump))]
 dump<-dump[grepl("\t",dump[,1]),]
 dump[,1]<-as.numeric(gsub("[\t(]","",dump[,1]))
 dump[,3]<-as.numeric(gsub("[^0-9.]", "",  dump[,3]))
 dump[,4]<-as.numeric(gsub("[^0-9.]", "",  dump[,4]))
 dump[,5]<-gsub("[[:punct:]]", "", dump[,5])
 dump[,5]<-substring(dump[,5],2)
-
+dump[,6]<-as.numeric(gsub("[^0-9.]", "",  dump[,6]))
 
 dump$sensor_no<-as.numeric(gsub("[^0-9.]", "",  dump$sensor))
 
-colnames(dump)<-c("ID", "datetime", "prob_bat","prob_sp","species_class","sensor", "sensor_no")
+colnames(dump)<-c("ID", "datetime", "prob_bat","prob_sp","species_class","call_time","sensor", "sensor_no")
 
 dump$datetime<-as.POSIXct(dump$datetime,format="%Y-%m-%d %H:%M:%S")
 
 dump$date<- as.Date(dump$datetime)
+
+dump$species_class<-substring(dump$species_class, 2)
 
 dump$time<- format(dump$datetime, "%H:%M:%S")
 
@@ -188,6 +190,9 @@ Combining data from CE Tools and OpenSensors:
 
 all_sensors<-rbind(open_df, days_active)
 
+all_sensors$sensor_no<-as.numeric(all_sensors$sensor_no)
+#all_sensors<-all_sensors[complete.cases(all_sensors),]
+
 min_date<-min(all_sensors$date)
 max_date<-max(all_sensors$date)
 
@@ -195,7 +200,10 @@ all_dates<-seq(min_date, max_date, by="day")
 all_df<-data.frame(rep(all_dates,15),rep(1:15, each = length(all_dates))) 
 colnames(all_df)<-c("date", "sensor_no")
 
+
 all_sensors_merge<-merge(all_df, all_sensors,by = c("date", "sensor_no" ) ,all=T)
+#all_sensors_merge<-all_sensors_merge[complete.cases(all_sensors_merge),]
+
 all_sensors_merge$sensor_no<-as.numeric(all_sensors_merge$sensor_no)
 
 ```
@@ -230,7 +238,7 @@ all_sensors_merge<-all_sensors_merge %>%
 
 
 #save(all_sensors_merge, file = "all_sensor_data_2017-07-12_2019-2019_01_14")
-save(all_sensors_merge, file = "all_sensor_data_2017_07_12-2019_02_23b")
+#save(all_sensors_merge, file = "all_sensor_data_2017_07_12-2019_02_23b")
 
 
 ```
@@ -263,10 +271,12 @@ all_sensors_merge[all_sensors_merge$date >= as.Date("2018-05-14") & all_sensors_
 
 all_sensors_merge[all_sensors_merge$date >= as.Date("2018-08-07") & all_sensors_merge$sensor_no == 5,]<-all_sensors_merge %>%
   filter(date >= as.Date("2018-08-07") & sensor_no == 5)%>%
-  mutate(deployment=replace(deployment, deployment==1, 2), Lat = replace(Lat, Lat==51.5362, 51.590616), Lon = replace(Lon, Lon==-0.0127, -0.0139243), Habitat = replace(Habitat, Habitat == "Grassland", "Duncan's Garden" ))
+  mutate(deployment=replace(deployment, deployment==1, 2), Lat = replace(Lat, Lat==51.5362, 51.590616), Lon = replace(Lon, Lon==-0.0127, -0.0139243))
 
 
 all_sensors_merge$deployment_id<-paste(all_sensors_merge$sensor_no, all_sensors_merge$deployment, sep = ".")
+
+
 
 ```
 
@@ -546,10 +556,17 @@ colnames <- c("sensor_id","timestamp", "call_time", "prob_bat", "c1", "p1")
 
 os_sens_df<-do.call("rbind", os_df)
 
+os_sens_df$c1<-gsub('[[:punct:] ]+',' ',os_sens_df$c1)
+
+os_sens_df$c1<-str_trim(os_sens_df$c1)
+
 
 os_sens_df$date<-as.Date(os_sens_df$timestamp)
 
 os_sens_df$time<-format(os_sens_df$timestamp, "%H:%M:%S")
+
+
+
 
 #write.csv(os_sens_df, "all_sensors_os_records.csv", row.names = FALSE)
 
@@ -559,11 +576,11 @@ os_sens_df$time<-format(os_sens_df$timestamp, "%H:%M:%S")
 
 os_sens_df<-read.csv("all_sensors_os_records.csv")
 
-ce_sensors<-data.frame(dump[,c("sensor","datetime","time","prob_bat","species_class","prob_sp" , "date", "time")])
+ce_sensors<-data.frame(dump[,c("sensor","datetime","call_time","prob_bat","species_class","prob_sp" , "date", "time")])
 colnames(ce_sensors)<-colnames(os_sens_df)
 ce_sensors$sensor_id<- gsub("[^0-9.]", "", ce_sensors$sensor_id)
 
-#write.csv(open_sensors, "all_sensors_ce_records.csv", row.names = FALSE)
+#write.csv(ce_sensors, "all_sensors_ce_records.csv", row.names = FALSE)
 
 ```
 
@@ -578,12 +595,16 @@ library(ggplot2)
 ce_sens_df<-read.csv("all_sensors_ce_records.csv")
 os_sens_df<-read.csv("all_sensors_os_records.csv")
 
+ce_sens_df$call_time<-as.numeric(as.character(ce_sens_df$call_time))
+
 all_sens_df<-rbind(ce_sens_df, os_sens_df)
 
 sensor_info<-read.csv("sensor_info.csv")
 
 
 all_sens_info<-merge(all_sens_df, sensor_info, by.x = "sensor_id", by.y = "sensor_no")
+
+table(all_sens_info$c1)
 
 
 ```
