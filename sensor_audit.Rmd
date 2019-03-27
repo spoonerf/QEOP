@@ -739,7 +739,7 @@ all_sens_info<-all_sens_info %>%
 #   mutate(c1 = replace(c1, c1 == "Pleotus austriaus", "Plecotus austriacus"))
 ```
 
-####Figure 6: Distribution of total daily calls for each month, by species. Four of the species appear to have been spelt in two ways...? 
+####Figure 6: Distribution of total daily calls for each month, by species.  
 
 ```{r}
 ggplot(all_sens_info, aes(x = month_ch, y = log10(count_sp)))+
@@ -755,7 +755,54 @@ ggplot(all_sens_info, aes(x = month_ch, y = log10(count_sp)))+
 ```
 
 
-####Figure 7: Distribution of total daily calls for each month, by habitat type.
+####Figure 7: Distribution of total daily calls for each month, by genus.  
+
+```{r}
+
+all_sens_info$g1<-vapply(strsplit(as.character(all_sens_info$c1)," "), `[`, 1, FUN.VALUE=character(1))
+
+all_sens_info<-all_sens_info %>%
+  group_by(sensor_id,g1, date)%>%
+  mutate(count_gen = n())%>%
+  ungroup()
+
+
+
+ggplot(all_sens_info, aes(x = month_ch, y = log10(count_gen)))+
+  geom_boxplot()+
+  facet_wrap(.~g1)+
+  labs(x = "Month", y = "Log10 Daily Calls")+
+  scale_x_discrete(labels=month.abb) +
+  theme_bw()+
+  theme(axis.text.y = element_text(lineheight = 0.5 , size = 18),
+        axis.text.x = element_text(size = 14, angle= 45, hjust = 1),
+        axis.title.x = element_text(size = 20),
+        axis.title.y = element_text(size = 20))
+```
+
+```{r}
+
+ggplot(all_sens_info, aes(p1, group = c1))+
+  geom_histogram()+
+  #scale_y_continuous(trans = "log1p")+
+  #ylim(0,5000)+
+  facet_wrap(~c1)
+
+
+
+ggplot(all_sens_info, aes(p1, group = c1))+
+  geom_histogram()+
+  #scale_y_log10()+
+  scale_y_continuous(breaks=c(1,10,100,1000,10000,100000, 1000000),trans = "log1p")+
+  #ylim(0,5000)+
+  ylab("Count (log1p)")+
+  xlab("Classification Probability")+
+  facet_wrap(~c1)
+
+
+
+```
+####Figure 8: Distribution of total daily calls for each month, by habitat type.
 
 ```{r}
 all_sens_info<-all_sens_info %>%
@@ -775,7 +822,7 @@ ggplot(all_sens_info, aes(x = month_ch, y = log10(count_hab)))+
         axis.title.y = element_text(size = 20))
 ```
 
-####Figure 8: Distribution of total daily calls for each month, by deployment.
+####Figure 9: Distribution of total daily calls for each month, by deployment.
 
 ```{r}
 all_sens_info<-all_sens_info %>%
