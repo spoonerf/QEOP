@@ -1,0 +1,166 @@
+---
+title: "QEOP Sensor Tests"
+author: "Fiona Spooner"
+date: "April 26, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(dplyr)
+library(ggplot2)
+```
+
+```{r}
+all_files<-list.files("Q:/data_tagged/Continuous_Recording/",full.names = TRUE, recursive = TRUE)
+all_files<-all_files[!grepl(".zip", all_files)]
+
+
+path_split<-strsplit(all_files, "/")
+
+get_last<-function(x){
+  image_out<-x[[length(x)]]
+  return(image_out)
+}
+
+path_out<-lapply(path_split, get_last)
+all_files_out<-unlist(path_out)
+
+all_files_num<-gsub("[^0-9]", "", all_files_out) 
+
+library(lubridate)
+dates<-as_datetime(as.numeric(all_files_num)/1000)
+
+dates_files<-data.frame(all_files, all_files_out, dates)
+```
+
+
+
+```{r}
+all_bat_files<-list.files("Q:/data_tagged/bats/all/",full.names = TRUE, recursive = TRUE)
+all_bat_files<-all_bat_files[grepl(".wav", all_bat_files)]
+
+path_split<-strsplit(all_bat_files, "_")
+
+path_out<-lapply(path_split, get_last)
+unl_path_out_bat<-unlist(path_out)
+
+
+bats_dates<- dates_files[dates_files$all_files_out %in% unl_path_out_bat,]
+
+bats_dates$classification<-"Bat"
+
+
+all_no_bat_files<-list.files("Q:/data_tagged/Sample_nobats/All/",full.names = TRUE, recursive = TRUE)
+all_no_bat_files<-all_no_bat_files[grepl(".wav", all_no_bat_files)]
+
+
+path_split<-strsplit(all_no_bat_files, "/")
+path_out<-lapply(path_split, get_last)
+unl_path_out_no_bat<-unlist(path_out)
+
+no_bats_dates<- dates_files[dates_files$all_files_out %in% unl_path_out_no_bat,]
+
+no_bats_dates$classification<-"No bat"
+
+
+all_samp<-rbind(bats_dates, no_bats_dates)
+```
+
+
+```{r}
+fp<-read.csv("Q:/data_tagged/bats/output/meta.csv")
+fn<-read.csv("Q:/data_tagged/Sample_nobats/output/meta.csv")
+
+path_split<-strsplit(as.character(fp$IN.FILE), "_")
+path_out<-lapply(path_split, get_last)
+fp$IN.FILE<-unlist(path_out)
+
+fpfn<-rbind(fp, fn)
+
+verification<-select(fpfn, c("IN.FILE", "MANUAL.ID"))
+
+all_df<-merge(all_samp, verification, by.x="all_files_out", by.y = "IN.FILE")
+
+all_df$correct_class<-all_df$classification == all_df$MANUAL.ID
+
+```
+
+```{r}
+
+ggplot(all_df, aes(x = classification, y = dates, colour = correct_class))+
+  geom_jitter(alpha = 0.4)
+
+
+ggplot(all_df, aes(x = MANUAL.ID, y = dates, colour = correct_class))+
+  geom_jitter(alpha = 0.4)
+
+
+path_split<-strsplit(all_files, "/")
+
+get_second_last<-function(x){
+  image_out<-x[[length(x) - 1]]
+  return(image_out)
+}
+
+path_out<-lapply(path_split, get_second_last)
+sensor_out<-unlist(path_out)
+sensor_no<-as.numeric(gsub("[^0-9]", "", sensor_out))
+
+dates_files$sensor_no<-sensor_no
+
+all_df<-merge(all_df, dates_files, by = "all_files_out")
+```
+
+
+```{r}
+
+bat<-all_df %>%
+  filter(classification == "Bat")
+
+#table(bat$correct_class)
+
+tp_rate<-(nrow(bat[bat$correct_class == TRUE,])/nrow(bat))*100
+
+wrong_bat<-all_df %>%
+  filter(correct_class == FALSE & classification == "Bat")
+
+no_bat<-all_df %>%
+  filter(classification == "No bat")
+
+#table(no_bat$correct_class)
+
+tn_rate<-(nrow(no_bat[no_bat$correct_class == TRUE,])/nrow(no_bat))*100
+
+```
+
+```{r, echo=FALSE}
+paste0("The true positive rate is ", round(tp_rate,3), "%" )
+
+paste0("The false positive rate is ",round(100 - tp_rate,3), "%" )
+
+paste0("The true negativee rate is ", round(tn_rate,3), "%" )
+
+paste0("The false negative rate is ", round(100 - tn_rate,3), "%" )
+
+```
+
+
+
+
+```{r,eval= FALSE, echo = FALSE}
+
+question<-filter(all_df, MANUAL.ID == "Not sure")
+
+
+question_to_move<-dates_files[dates_files$all_files_out %in% question$all_files_out,]
+
+new_loc<-paste("D:/Fiona/QEOP/data_tagged/2017_Sarah/unsure_recordings/", question_to_move$all_files_out, sep = "")
+
+
+file.copy(as.character(question_to_move$all_files), new_loc)
+
+```
