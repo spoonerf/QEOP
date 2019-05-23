@@ -23,7 +23,7 @@ library(anytime)
 
 Reading in the data from the CE Tools Server:
 
-```{r, eval = FALSE}
+```{r, eval=FALSE}
 
 #dump<-read.table("qeop_dump_all.csv", fill=T, sep=",")
 
@@ -364,6 +364,7 @@ all_sensors_df$inactive_month[all_sensors_df$inactive <30]<-NA
 
 all_sensors_df$inactive_month[all_sensors_df$inactive >=30]<-1
 
+#write.csv(all_sensors_df, "all_sensors_daily.csv", row.names = FALSE)
 
 
 ```
@@ -393,6 +394,65 @@ ggplot(all_sensors_df, aes(x = date, y = deployment_id, group = deployment_id))+
 
 ```
 
+```{r}
+library(OpenStreetMap)
+
+library(ggmap)
+library(sp)
+
+min_lat =  51.15 
+max_lat = 51.70
+min_lon = -0.123 
+max_lon = 0.095
+
+map <- openmap(c(max_lat,min_lon), c(min_lat,max_lon), zoom = NULL,type = "osm",mergeTiles = TRUE)
+
+
+ all_active_df<-all_sensors_df %>%
+  filter(deployment_id != "5.2")%>%
+  group_by(deployment_id)%>%
+  mutate(total_days = n_distinct(date),  inactive_days = sum(!is.na(inactive_week)),active_days = total_days - inactive_days, active_days_count = sum(na.omit(count)), average_daily_active_counts = active_days_count/active_days) %>%
+  filter(is.na(inactive_week))%>%
+  select(deployment_id, inactive_week, average_daily_active_counts, Lat, Lon, Habitat)%>%
+  distinct()
+
+
+# write.csv(all_active_df, "bat_activity_qeop.csv", row.names = FALSE)
+ 
+ 
+```
+
+```{r}
+library(ggmap)
+
+xy<-cbind(all_active_df$Lon, all_active_df$Lat)
+S<-SpatialPoints(xy)
+lnd<-bbox(S)
+buff<-0.0015
+
+lnd[1]<-lnd[1]-buff
+lnd[2]<-lnd[2]-buff
+lnd[3]<-lnd[3]+buff
+lnd[4]<-lnd[4]+buff
+
+lnd.b1 <- ggmap(get_map(location = lnd))
+
+qeop<-lnd.b1 +  geom_point(aes(size = average_daily_active_counts, x = Lon, y = Lat, fill = Habitat), colour = "black",pch=21,data = all_active_df) + 
+  scale_size_continuous(range=c(5, 15)) +
+  labs(size = "Daily Average\nSensor Detections") + 
+  theme_bw()+
+  guides(fill=guide_legend(override.aes=list(size=5)))+
+  xlab("Longitude")+
+  ylab("Latitude")
+
+
+png("QEOP_Map.png", width = 8, height = 8, units = 'in', res = 750)
+qeop# Make plot
+dev.off()
+
+
+
+```
 ####Figure 3: Red line shows where there have been no detections for fourteen continuous days
 
 ```{r, echo = FALSE}
@@ -471,13 +531,14 @@ getmode<-function(v){
 #getting rid of the folders with multiple dates in - removing anything which doesn't have the modal average number of characters. Bit shaky but okay for now.
 os_dirs<-os_dirs[nchar(os_dirs)==getmode(nchar(os_dirs))]
 
-df<-data.frame()
 
 os_tool_out<-function(os_dir){
   file_list<-list.files(os_dir)
   
   for (file in file_list){
-         
+      print(os_dir)
+      print(file)
+    
       if(grepl(".csv", file)){
          df_temp = read.table(paste(os_dir,"/", file, sep=""), sep=",", header = T, stringsAsFactors = F)
          df_temp$sensor_id<-as.numeric(gsub("\\D", "", file))
@@ -504,8 +565,7 @@ os_tool_out<-function(os_dir){
              
              timestamp<-toString(strsplit(timestamp, "[.]")[[1]][2:7])
              
-             timestamp<-as.POSIXct(timestamp, format = "%Y, %m, %d, %H, %M, %S")
-              
+             timestamp<-as.POSIXct(timestamp, format = "%Y, %m, %d, %H, %M, %S")  
              call_time<-x[which(x == "call_time:")+1]
              call_time<-as.numeric(substr(call_time, 1, nchar(call_time)-1)) 
              
@@ -526,10 +586,12 @@ os_tool_out<-function(os_dir){
          return(df_out)
          }
          
-         data_out<-lapply(spl,get_neat_os_data)
+         df_out<-lapply(spl,get_neat_os_data)
+         df_out<-do.call("rbind", df_out)
          
-        }
-         
+           }
+         #print(os_dir)
+         #print(file)
          df = rbind(df, df_out)
          #print(paste(os_dir, file, sep="/"))
         
@@ -538,7 +600,11 @@ os_tool_out<-function(os_dir){
   return(df)
 }
 
+df<-data.frame()
+
 os_df<-lapply(os_dirs, os_tool_out)
+
+
 
 colnames <- c("sensor_id","timestamp", "call_time", "prob_bat", "c1", "p1") 
 
@@ -568,13 +634,13 @@ os_sens_df$time<-format(os_sens_df$timestamp, "%H:%M:%S")
 
 
 
-#write.csv(os_sens_df, "all_sensors_os_records.csv", row.names = FALSE)
+#write.csv(os_sens_df, "all_sensors_os_records_May_2019.csv", row.names = FALSE)
 
 ```
 
 ```{r, eval=FALSE, echo = FALSE}
 
-os_sens_df<-read.csv("all_sensors_os_records.csv")
+os_sens_df<-read.csv("all_sensors_os_records_May_2019.csv")
 
 ce_sensors<-data.frame(dump[,c("sensor","datetime","call_time","prob_bat","species_class","prob_sp" , "date", "time")])
 colnames(ce_sensors)<-colnames(os_sens_df)
@@ -593,7 +659,7 @@ library(lubridate)
 library(ggplot2)
 
 ce_sens_df<-read.csv("all_sensors_ce_records.csv")
-os_sens_df<-read.csv("all_sensors_os_records.csv")
+os_sens_df<-read.csv("all_sensors_os_records_May_2019.csv")
 
 ce_sens_df$call_time<-as.numeric(as.character(ce_sens_df$call_time))
 
@@ -603,8 +669,6 @@ sensor_info<-read.csv("sensor_info.csv")
 
 
 all_sens_info<-merge(all_sens_df, sensor_info, by.x = "sensor_id", by.y = "sensor_no")
-
-table(all_sens_info$c1)
 
 
 ```
@@ -661,7 +725,7 @@ all_sens_info<-all_sens_info[complete.cases(all_sens_info),]
 all_sens_info$Habitat<-as.character(all_sens_info$Habitat)
 
 #shifting anything before 6pm forwrd by a day
-all_sens_info[hour(all_sens_info$timestamp) < 18, ]$time<-all_sens_info[hour(all_sens_info$timestamp) < 18, ]$time +days(1)
+#all_sens_info[hour(all_sens_info$timestamp) < 18, ]$time<-all_sens_info[hour(all_sens_info$timestamp) < 18, ]$time +days(1)
 
 ```
 
@@ -687,8 +751,6 @@ ggplot(all_sens_info_night, aes(x = month, y = time))+
   theme_bw()
 
 ```
-
-
 
 
 ```{r}
@@ -777,8 +839,32 @@ ggplot(all_sens_info, aes(x = month_ch, y = log10(count_gen)))+
   theme(axis.text.y = element_text(lineheight = 0.5 , size = 18),
         axis.text.x = element_text(size = 14, angle= 45, hjust = 1),
         axis.title.x = element_text(size = 20),
-        axis.title.y = element_text(size = 20))
+        axis.title.y = element_text(size = 20),
+        strip.text.x = element_text(size = 20))
 ```
+
+```{r}
+
+all_sensors_active<-merge(all_active_df[, c("date", "deployment_id", "inactive", "inactive_week")], all_sens_info, by = c("date", "deployment_id"))
+
+
+all_sensors_active %>%
+  filter(is.na(inactive_week))%>%
+ggplot(aes(x = month_ch, y = log10(count_gen)))+
+  geom_boxplot()+
+  facet_wrap(.~as.factor(g1))+
+  labs(x = "Month", y = "Log10 Daily Calls")+
+  scale_x_discrete(labels=month.abb) +
+  theme_bw()+
+  theme(axis.text.y = element_text(lineheight = 0.5 , size = 18),
+        axis.text.x = element_text(size = 14, angle= 45, hjust = 1),
+        axis.title.x = element_text(size = 20),
+        axis.title.y = element_text(size = 20),
+        strip.text.x = element_text(size = 20))
+
+```
+
+
 
 ```{r}
 

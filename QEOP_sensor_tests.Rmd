@@ -6,25 +6,24 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 ```
 
 ```{r}
 library(dplyr)
 library(ggplot2)
+library(knitr)
+
+source("D:/Fiona/useful_functions.R")
+
 ```
 
-```{r}
+```{r, eval =TRUE, echo = FALSE}
 all_files<-list.files("Q:/data_tagged/Continuous_Recording/",full.names = TRUE, recursive = TRUE)
 all_files<-all_files[!grepl(".zip", all_files)]
 
 
 path_split<-strsplit(all_files, "/")
-
-get_last<-function(x){
-  image_out<-x[[length(x)]]
-  return(image_out)
-}
 
 path_out<-lapply(path_split, get_last)
 all_files_out<-unlist(path_out)
@@ -38,8 +37,16 @@ dates_files<-data.frame(all_files, all_files_out, dates)
 ```
 
 
+```{r, eval = FALSE, echo = FALSE}
+
+sensor_out<-lapply(path_split, get_second_last)
+all_sensor_out<-unlist(sensor_out)
+
+
+```
 
 ```{r}
+
 all_bat_files<-list.files("Q:/data_tagged/bats/all/",full.names = TRUE, recursive = TRUE)
 all_bat_files<-all_bat_files[grepl(".wav", all_bat_files)]
 
@@ -81,7 +88,7 @@ fp$IN.FILE<-unlist(path_out)
 
 fpfn<-rbind(fp, fn)
 
-verification<-select(fpfn, c("IN.FILE", "MANUAL.ID"))
+verification<-dplyr::select(fpfn, c("IN.FILE", "MANUAL.ID"))
 
 all_df<-merge(all_samp, verification, by.x="all_files_out", by.y = "IN.FILE")
 
@@ -94,17 +101,12 @@ all_df$correct_class<-all_df$classification == all_df$MANUAL.ID
 ggplot(all_df, aes(x = classification, y = dates, colour = correct_class))+
   geom_jitter(alpha = 0.4)
 
-
-ggplot(all_df, aes(x = MANUAL.ID, y = dates, colour = correct_class))+
-  geom_jitter(alpha = 0.4)
+# 
+# ggplot(all_df, aes(x = MANUAL.ID, y = dates, colour = correct_class))+
+#   geom_jitter(alpha = 0.4)
 
 
 path_split<-strsplit(all_files, "/")
-
-get_second_last<-function(x){
-  image_out<-x[[length(x) - 1]]
-  return(image_out)
-}
 
 path_out<-lapply(path_split, get_second_last)
 sensor_out<-unlist(path_out)
@@ -118,6 +120,14 @@ all_df<-merge(all_df, dates_files, by = "all_files_out")
 
 ```{r}
 
+ggplot(all_df, aes(x = MANUAL.ID, y = sensor_no))+
+  geom_jitter(alpha = 0.4)
+
+```
+
+
+```{r}
+
 bat<-all_df %>%
   filter(classification == "Bat")
 
@@ -125,8 +135,8 @@ bat<-all_df %>%
 
 tp_rate<-(nrow(bat[bat$correct_class == TRUE,])/nrow(bat))*100
 
-wrong_bat<-all_df %>%
-  filter(correct_class == FALSE & classification == "Bat")
+# wrong_bat<-all_df %>%
+#   filter(correct_class == FALSE & classification == "Bat")
 
 no_bat<-all_df %>%
   filter(classification == "No bat")
@@ -142,25 +152,58 @@ paste0("The true positive rate is ", round(tp_rate,3), "%" )
 
 paste0("The false positive rate is ",round(100 - tp_rate,3), "%" )
 
-paste0("The true negativee rate is ", round(tn_rate,3), "%" )
+paste0("The true negative rate is ", round(tn_rate,3), "%" )
 
 paste0("The false negative rate is ", round(100 - tn_rate,3), "%" )
 
 ```
 
+Looking at true positive across sensors. Sensor 6 performs very poorly with a true positive rate of 32.5%, this sensor is in quite a "busy" location. It is near two roads, a roundabout, a canal, some footpaths and near the ArcelorMittal structure. The sensor seems to continually mistake machine noise for bats.  
+
+Sensors 1 and 11 also do not perform well with TPR of 61.5% and 64.4% respectively. There are very few detections at Sensor 1 (13), but 38.5% of these are misdetected machine noise. Sensor 1 is near both the olympic stadium and the ArcelorMittal orbit. Sensor 11 also seems to experience a lot of machine noise but is not near an obviously "busy" site.   
+
+```{r}
+
+bat_sens<-all_df %>%
+  group_by(sensor_no)%>%
+  filter(classification == "Bat")%>%
+  mutate(true_count = sum(correct_class[correct_class== TRUE]),total_count = n() , true_pos_prop = true_count/total_count)%>%
+  select(sensor_no, true_count, total_count, true_pos_prop)%>%
+  distinct()
 
 
-
-```{r,eval= FALSE, echo = FALSE}
-
-question<-filter(all_df, MANUAL.ID == "Not sure")
+kable(bat_sens)
 
 
-question_to_move<-dates_files[dates_files$all_files_out %in% question$all_files_out,]
-
-new_loc<-paste("D:/Fiona/QEOP/data_tagged/2017_Sarah/unsure_recordings/", question_to_move$all_files_out, sep = "")
-
-
-file.copy(as.character(question_to_move$all_files), new_loc)
 
 ```
+
+
+
+```{r}
+
+no_bat_sens<-all_df %>%
+  group_by(sensor_no)%>%
+  filter(classification == "No bat")%>%
+  mutate(true_count = sum(correct_class[correct_class== TRUE]),total_count = n() , true_neg_prop = true_count/total_count)%>%
+  select(sensor_no, true_count, total_count, true_neg_prop)%>%
+  distinct()
+
+
+knitr::kable(no_bat_sens)
+
+
+
+```
+
+```{r, eval = FALSE}
+
+all_files<-merge(dates_files, all_df, by = c("all_files_out"))
+
+all_files<-all_files[,c("all_files_out", "all_files", "dates", "classification", "MANUAL.ID", "correct_class", "sensor_no")]
+#write.csv(all_files, "all_sensor_fn_fp.csv", row.names = FALSE)
+
+
+```
+
+
