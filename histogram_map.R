@@ -72,25 +72,26 @@ geo_data$col[geo_data$hab == "Parkland"]<-"Grey"
 geo_data$col[geo_data$hab == "Trees"]<-"Green"
 
 bar.testplot_list <- 
-  lapply(1:length(unique(monthly_bats$sensor_id)), function(i) { 
+  lapply(1:length(unique(geo_data$who)), function(i) { 
     gt_plot <- ggplotGrob(
       ggplot(geo_data[geo_data$who == i,])+
-        geom_bar(aes(factor(id, levels = month.name),value,group=who, fill = hab),
+        geom_bar(aes( x= factor(id, levels = month.name),y = value,group=who, fill = id),
                  position='dodge',stat='identity', color = "black") +
         labs(x = NULL, y = NULL) + 
         theme(legend.position = "none", rect = element_blank(),
-              line = element_blank(), text = element_blank()) 
+              line = element_blank(), text = element_blank()) +
+        coord_polar() 
     )
     panel_coords <- gt_plot$layout[gt_plot$layout$name == "panel",]
     gt_plot[panel_coords$t:panel_coords$b, panel_coords$l:panel_coords$r]
   })
 
-bar_annotation_list <- lapply(1:length(unique(monthly_bats$sensor_id)), function(i) 
+bar_annotation_list <- lapply(1:length(unique(geo_data$who)), function(i) 
   inset(bar.testplot_list[[i]], 
-                    xmin = map.test.centroids$Lon[i] - 0.0006,
-                    xmax = map.test.centroids$Lon[i] + 0.0006,
-                    ymin = map.test.centroids$Lat[i] - 0.0006,
-                    ymax = map.test.centroids$Lat[i] + 0.0006) )
+                    xmin = map.test.centroids$Lon[i] - 0.0012,
+                    xmax = map.test.centroids$Lon[i] + 0.0012,
+                    ymin = map.test.centroids$Lat[i] - 0.0012,
+                    ymax = map.test.centroids$Lat[i] + 0.0012) )
 
 result_plot <- Reduce(`+`, bar_annotation_list, map.test)
 
