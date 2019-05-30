@@ -1,0 +1,3 @@
+"timestamp","call_time","prob_bat","c1","p1","c2","p2","c3","p3","datetime","date"
+1525112839546,1.735,0.97,"Pipistrellus nathusii",1,"Nyctalus leisleri",0,"Pipistrellus pipistrellus",0,2018-04-30 19:27:19,2018-04-30
+1525113625250,0.043,0.964,"Pipistrellus nathusii",1,"Nyctalus leisleri",0,"Nyctalus noctula",0,2018-04-30 19:40:25,2018-04-30

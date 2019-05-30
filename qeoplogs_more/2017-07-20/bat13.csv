@@ -1,0 +1,13 @@
+timestamp,call_time,prob_bat,c1,p1,c2,p2,c3,p3
+1500514843936,0.373,1.0,Pipistrellus pipistrellus,0.998,Pipistrellus pygmaeus,0.001,Pipistrellus nathusii,0.001
+1500514843936,0.286,1.0,Pipistrellus pipistrellus,0.995,Pipistrellus pygmaeus,0.002,Nyctalus leisleri,0.001
+1500514843936,0.103,1.0,Plecotus auritus,0.449,Pipistrellus pipistrellus,0.18,Pipistrellus nathusii,0.142
+1500514843936,0.189,1.0,Pipistrellus pipistrellus,0.956,Pipistrellus pygmaeus,0.017,Pipistrellus nathusii,0.016
+1500514843936,0.636,1.0,Pipistrellus pipistrellus,0.997,Pipistrellus pygmaeus,0.001,Pipistrellus nathusii,0.001
+1500514843936,0.728,0.984,Pipistrellus nathusii,0.549,Pipistrellus pipistrellus,0.413,Plecotus auritus,0.015
+1500514843936,0.469,1.0,Pipistrellus pipistrellus,0.543,Pipistrellus nathusii,0.433,Pipistrellus pygmaeus,0.011
+1500514843936,0.922,0.995,Pipistrellus pipistrellus,0.998,Myotis daubentonii,0.001,Pipistrellus nathusii,0.0
+1500514843936,1.013,0.984,Pipistrellus nathusii,0.37,Pipistrellus pipistrellus,0.278,Plecotus auritus,0.269
+1500514843936,1.288,0.983,Plecotus auritus,0.906,Nyctalus noctula,0.037,Pipistrellus pipistrellus,0.031
+1500514843936,1.735,0.98,Plecotus auritus,0.998,Myotis nattereri,0.001,Nyctalus noctula,0.0
+1500514843936,1.901,0.983,Plecotus auritus,1.0,Pipistrellus pygmaeus,0.0,Myotis nattereri,0.0

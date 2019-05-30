@@ -1,0 +1,12 @@
+timestamp,call_time,prob_bat,c1,p1,c2,p2,c3,p3
+1506890353005,0.647,0.989,Pipistrellus pipistrellus,0.723,Pipistrellus nathusii,0.264,Nyctalus leisleri,0.007
+1506890353005,1.057,0.999,Pipistrellus nathusii,0.535,Pipistrellus pipistrellus,0.453,Pipistrellus pygmaeus,0.007
+1506890353005,1.461,0.984,Pipistrellus pipistrellus,0.956,Pipistrellus nathusii,0.034,Nyctalus leisleri,0.008
+1506890353005,1.374,0.996,Pipistrellus pipistrellus,0.977,Nyctalus leisleri,0.017,Pipistrellus nathusii,0.004
+1506890353005,1.147,0.999,Pipistrellus nathusii,0.831,Pipistrellus pipistrellus,0.113,Pipistrellus pygmaeus,0.02
+1506890353005,1.632,0.997,Pipistrellus pipistrellus,0.767,Pipistrellus nathusii,0.23,Nyctalus leisleri,0.002
+1506890353005,1.724,1.0,Pipistrellus pipistrellus,0.637,Pipistrellus nathusii,0.332,Nyctalus leisleri,0.026
+1506890353005,1.54,0.98,Pipistrellus nathusii,0.765,Pipistrellus pipistrellus,0.231,Nyctalus leisleri,0.002
+1506890353005,1.907,1.0,Pipistrellus pipistrellus,0.996,Pipistrellus nathusii,0.002,Nyctalus leisleri,0.001
+1506890353005,2.09,0.999,Pipistrellus nathusii,0.892,Pipistrellus pipistrellus,0.107,Nyctalus leisleri,0.001
+1506890353005,2.273,0.986,Pipistrellus nathusii,0.984,Pipistrellus pipistrellus,0.014,Nyctalus leisleri,0.001

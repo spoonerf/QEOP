@@ -1,0 +1,1 @@
+{"id": ObjectId('5b0cb149e138234659a80ebe'), "sensor_name": 'sensor_bat8', "entry_added_date": datetime.datetime(2018, 5, 29, 1, 47, 53, 761000), "timestamp": datetime.datetime(2018, 5, 28, 17, 29, 6, 170000), "call_time": 0.485, "prob_bat": 0.993, "c1": 'Pipistrellus nathusii', "p1": 1.0, "c2": 'Pipistrellus pipistrellus', "p2": 0.0, "c3": 'Pipistrellus pygmaeus', "p3": 0.0}

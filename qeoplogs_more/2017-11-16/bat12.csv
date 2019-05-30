@@ -1,0 +1,22 @@
+"timestamp","call_time","prob_bat","c1","p1","c2","p2","c3","p3","datetime","date"
+1510808122640,2.603,0.961,"Pipistrellus pygmaeus",1,"Nyctalus leisleri",0,"Plecotus auritus",0,2017-11-16 04:55:22,2017-11-16
+1510815122185,2.538,0.964,"Pipistrellus pygmaeus",0.998,"Nyctalus leisleri",0.002,"Plecotus auritus",0,2017-11-16 06:52:02,2017-11-16
+1510815131220,0.249,0.976,"Pipistrellus pygmaeus",0.999,"Nyctalus leisleri",0,"Plecotus auritus",0,2017-11-16 06:52:11,2017-11-16
+1510815131220,0.431,0.972,"Pipistrellus pygmaeus",0.993,"Nyctalus leisleri",0.005,"Plecotus auritus",0.002,2017-11-16 06:52:11,2017-11-16
+1510815131220,0.653,1,"Pipistrellus pygmaeus",1,"Nyctalus leisleri",0,"Myotis brandtii",0,2017-11-16 06:52:11,2017-11-16
+1510815131220,0.739,0.999,"Pipistrellus pygmaeus",1,"Nyctalus leisleri",0,"Myotis brandtii",0,2017-11-16 06:52:11,2017-11-16
+1510815131220,0.824,1,"Pipistrellus pygmaeus",1,"Nyctalus leisleri",0,"Myotis brandtii",0,2017-11-16 06:52:11,2017-11-16
+1510815131220,1.084,1,"Pipistrellus pygmaeus",1,"Nyctalus leisleri",0,"Myotis brandtii",0,2017-11-16 06:52:11,2017-11-16
+1510815131220,0.997,0.977,"Pipistrellus pygmaeus",1,"Nyctalus leisleri",0,"Plecotus auritus",0,2017-11-16 06:52:11,2017-11-16
+1510815131220,1.876,0.955,"Pipistrellus pygmaeus",1,"Nyctalus leisleri",0,"Myotis brandtii",0,2017-11-16 06:52:11,2017-11-16
+1510815131220,2.57,0.998,"Pipistrellus pygmaeus",1,"Nyctalus leisleri",0,"Myotis brandtii",0,2017-11-16 06:52:11,2017-11-16
+1510815131220,2.747,1,"Pipistrellus pygmaeus",1,"Nyctalus leisleri",0,"Pipistrellus pipistrellus",0,2017-11-16 06:52:11,2017-11-16
+1510815131220,2.931,1,"Pipistrellus pygmaeus",1,"Nyctalus leisleri",0,"Myotis brandtii",0,2017-11-16 06:52:11,2017-11-16
+1510818063894,2.953,0.976,"Pipistrellus nathusii",1,"Nyctalus leisleri",0,"Pipistrellus pipistrellus",0,2017-11-16 07:41:03,2017-11-16
+1510858343455,1.068,0.991,"Pipistrellus pipistrellus",1,"Pipistrellus nathusii",0,"Nyctalus leisleri",0,2017-11-16 18:52:23,2017-11-16
+1510858343455,1.488,0.994,"Pipistrellus pipistrellus",1,"Pipistrellus nathusii",0,"Myotis daubentonii",0,2017-11-16 18:52:23,2017-11-16
+1510858343455,1.573,0.998,"Pipistrellus pipistrellus",1,"Pipistrellus nathusii",0,"Myotis daubentonii",0,2017-11-16 18:52:23,2017-11-16
+1510858343455,1.843,1,"Pipistrellus pipistrellus",1,"Pipistrellus nathusii",0,"Nyctalus leisleri",0,2017-11-16 18:52:23,2017-11-16
+1510858343455,2.199,0.997,"Pipistrellus pipistrellus",1,"Pipistrellus nathusii",0,"Pipistrellus pygmaeus",0,2017-11-16 18:52:23,2017-11-16
+1510858343455,2.042,1,"Pipistrellus pipistrellus",1,"Myotis daubentonii",0,"Pipistrellus nathusii",0,2017-11-16 18:52:23,2017-11-16
+1510858343455,1.939,1,"Pipistrellus pipistrellus",1,"Pipistrellus nathusii",0,"Nyctalus leisleri",0,2017-11-16 18:52:23,2017-11-16

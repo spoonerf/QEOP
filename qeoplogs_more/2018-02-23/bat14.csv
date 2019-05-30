@@ -1,0 +1,15 @@
+"timestamp","call_time","prob_bat","c1","p1","c2","p2","c3","p3","datetime","date"
+1519391259729,1.434,0.989,"Pipistrellus pygmaeus",0.942,"Pipistrellus pipistrellus",0.058,"Nyctalus leisleri",0,2018-02-23 13:07:39,2018-02-23
+1519403310480,0.314,0.979,"Pipistrellus pipistrellus",0.732,"Pipistrellus nathusii",0.265,"Nyctalus leisleri",0.003,2018-02-23 16:28:30,2018-02-23
+1519403310480,0.049,0.987,"Pipistrellus nathusii",0.969,"Pipistrellus pipistrellus",0.031,"Nyctalus leisleri",0.001,2018-02-23 16:28:30,2018-02-23
+1519403310480,0,0.997,"Pipistrellus nathusii",0.987,"Pipistrellus pipistrellus",0.01,"Nyctalus leisleri",0.003,2018-02-23 16:28:30,2018-02-23
+1519403310480,0.189,0.95,"Pipistrellus pipistrellus",0.991,"Pipistrellus pygmaeus",0.009,"Pipistrellus nathusii",0,2018-02-23 16:28:30,2018-02-23
+1519403310480,0.404,1,"Pipistrellus pipistrellus",0.743,"Pipistrellus nathusii",0.235,"Nyctalus leisleri",0.021,2018-02-23 16:28:30,2018-02-23
+1519403310480,1.32,0.963,"Pipistrellus pipistrellus",0.987,"Pipistrellus pygmaeus",0.011,"Pipistrellus nathusii",0.001,2018-02-23 16:28:30,2018-02-23
+1519403310480,1.158,1,"Pipistrellus pipistrellus",0.599,"Pipistrellus pygmaeus",0.398,"Nyctalus leisleri",0.002,2018-02-23 16:28:30,2018-02-23
+1519403738671,0.265,0.995,"Pipistrellus pipistrellus",0.964,"Pipistrellus nathusii",0.036,"Pipistrellus pygmaeus",0,2018-02-23 16:35:38,2018-02-23
+1519414452837,0.114,0.963,"Pipistrellus nathusii",1,"Nyctalus leisleri",0,"Pipistrellus pipistrellus",0,2018-02-23 19:34:12,2018-02-23
+1519426532059,2.527,0.981,"Pipistrellus pygmaeus",1,"Nyctalus leisleri",0,"Pipistrellus pipistrellus",0,2018-02-23 22:55:32,2018-02-23
+1519426532059,2.608,0.989,"Pipistrellus pygmaeus",0.96,"Pipistrellus nathusii",0.03,"Nyctalus leisleri",0.01,2018-02-23 22:55:32,2018-02-23
+1519426532059,2.321,0.999,"Pipistrellus pipistrellus",0.99,"Pipistrellus pygmaeus",0.005,"Pipistrellus nathusii",0.005,2018-02-23 22:55:32,2018-02-23
+1519426532059,2.709,0.96,"Pipistrellus pygmaeus",0.726,"Pipistrellus pipistrellus",0.261,"Pipistrellus nathusii",0.014,2018-02-23 22:55:32,2018-02-23

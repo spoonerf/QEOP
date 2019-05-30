@@ -1,0 +1,15 @@
+"timestamp","call_time","prob_bat","c1","p1","c2","p2","c3","p3","datetime","date"
+1510728517325,1.611,0.966,"Pipistrellus pipistrellus",0.532,"Pipistrellus nathusii",0.467,"Nyctalus leisleri",0.001,2017-11-15 06:48:37,2017-11-15
+1510765732612,0.027,0.978,"Pipistrellus pipistrellus",1,"Pipistrellus nathusii",0,"Nyctalus leisleri",0,2017-11-15 17:08:52,2017-11-15
+1510765732612,0.647,0.997,"Pipistrellus pipistrellus",0.996,"Pipistrellus nathusii",0.004,"Nyctalus leisleri",0,2017-11-15 17:08:52,2017-11-15
+1510765732612,0.878,0.985,"Pipistrellus pipistrellus",1,"Pipistrellus nathusii",0,"Pipistrellus pygmaeus",0,2017-11-15 17:08:52,2017-11-15
+1510765732612,1.136,0.965,"Pipistrellus pipistrellus",0.886,"Pipistrellus nathusii",0.114,"Nyctalus leisleri",0.001,2017-11-15 17:08:52,2017-11-15
+1510765741629,1.38,0.999,"Pipistrellus pipistrellus",1,"Pipistrellus nathusii",0,"Nyctalus leisleri",0,2017-11-15 17:09:01,2017-11-15
+1510765741629,1.488,0.985,"Pipistrellus pipistrellus",0.973,"Pipistrellus nathusii",0.027,"Nyctalus leisleri",0,2017-11-15 17:09:01,2017-11-15
+1510765741629,1.778,0.999,"Pipistrellus pipistrellus",1,"Pipistrellus nathusii",0,"Nyctalus leisleri",0,2017-11-15 17:09:01,2017-11-15
+1510765741629,1.676,1,"Pipistrellus pipistrellus",1,"Pipistrellus nathusii",0,"Nyctalus leisleri",0,2017-11-15 17:09:01,2017-11-15
+1510765741629,1.961,1,"Pipistrellus pipistrellus",0.999,"Pipistrellus nathusii",0.001,"Nyctalus leisleri",0,2017-11-15 17:09:01,2017-11-15
+1510765741629,2.063,1,"Pipistrellus pipistrellus",1,"Pipistrellus nathusii",0,"Nyctalus leisleri",0,2017-11-15 17:09:01,2017-11-15
+1510765741629,2.242,0.999,"Pipistrellus pipistrellus",0.999,"Pipistrellus nathusii",0.001,"Nyctalus leisleri",0,2017-11-15 17:09:01,2017-11-15
+1510785345436,1.886,0.992,"Pipistrellus pipistrellus",0.772,"Pipistrellus nathusii",0.176,"Nyctalus leisleri",0.018,2017-11-15 22:35:45,2017-11-15
+1510785345436,2.37,0.994,"Pipistrellus pipistrellus",0.775,"Pipistrellus nathusii",0.204,"Pipistrellus pygmaeus",0.011,2017-11-15 22:35:45,2017-11-15

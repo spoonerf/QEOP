@@ -1,0 +1,15 @@
+timestamp,call_time,prob_bat,c1,p1,c2,p2,c3,p3
+1501121466872,2.085,0.996,Pipistrellus pipistrellus,0.985,Pipistrellus nathusii,0.014,Nyctalus leisleri,0.0
+1501121466872,2.253,0.996,Pipistrellus pipistrellus,0.991,Pipistrellus nathusii,0.008,Nyctalus leisleri,0.001
+1501121466872,2.419,1.0,Pipistrellus pipistrellus,0.97,Pipistrellus nathusii,0.029,Nyctalus leisleri,0.0
+1501121466872,2.592,1.0,Pipistrellus pipistrellus,0.996,Pipistrellus nathusii,0.003,Nyctalus leisleri,0.0
+1501121466872,2.947,0.999,Pipistrellus pipistrellus,0.98,Pipistrellus nathusii,0.016,Nyctalus leisleri,0.003
+1501121466872,2.677,1.0,Pipistrellus pipistrellus,0.999,Pipistrellus nathusii,0.001,Nyctalus leisleri,0.0
+1501121466872,2.763,0.998,Pipistrellus pipistrellus,0.837,Pipistrellus nathusii,0.162,Pipistrellus pygmaeus,0.001
+1501121466872,2.855,1.0,Pipistrellus pipistrellus,0.968,Pipistrellus nathusii,0.031,Pipistrellus pygmaeus,0.0
+1501121612523,2.117,0.998,Pipistrellus pipistrellus,0.971,Pipistrellus nathusii,0.022,Nyctalus leisleri,0.005
+1501121612523,2.565,0.962,Pipistrellus pipistrellus,0.699,Pipistrellus nathusii,0.267,Pipistrellus pygmaeus,0.019
+1501121612523,2.3,1.0,Pipistrellus pipistrellus,0.998,Pipistrellus nathusii,0.001,Myotis daubentonii,0.0
+1501121612523,2.478,0.999,Pipistrellus pipistrellus,0.777,Pipistrellus nathusii,0.221,Pipistrellus pygmaeus,0.001
+1501192856252,2.484,0.996,Nyctalus leisleri,1.0,Pipistrellus pipistrellus,0.0,Nyctalus noctula,0.0
+1501192901580,0.781,0.975,Nyctalus leisleri,1.0,Nyctalus noctula,0.0,Pipistrellus pipistrellus,0.0

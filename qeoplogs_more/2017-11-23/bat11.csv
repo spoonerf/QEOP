@@ -1,0 +1,15 @@
+"timestamp","call_time","prob_bat","c1","p1","c2","p2","c3","p3","datetime","date"
+1511425125212,2.226,0.979,"Pipistrellus pipistrellus",1,"Pipistrellus nathusii",0,"Nyctalus leisleri",0,2017-11-23 08:18:45,2017-11-23
+1511426298738,1.977,0.995,"Pipistrellus nathusii",0.997,"Nyctalus leisleri",0.002,"Pipistrellus pipistrellus",0.001,2017-11-23 08:38:18,2017-11-23
+1511427805876,1.632,0.975,"Pipistrellus nathusii",1,"Nyctalus leisleri",0,"Pipistrellus pipistrellus",0,2017-11-23 09:03:25,2017-11-23
+1511427805876,2.376,0.984,"Pipistrellus nathusii",0.684,"Nyctalus noctula",0.283,"Pipistrellus pipistrellus",0.031,2017-11-23 09:03:25,2017-11-23
+1511433943604,1.638,0.994,"Pipistrellus nathusii",1,"Pipistrellus pipistrellus",0,"Nyctalus leisleri",0,2017-11-23 10:45:43,2017-11-23
+1511434431243,1.843,0.982,"Pipistrellus nathusii",0.898,"Pipistrellus pipistrellus",0.054,"Nyctalus leisleri",0.047,2017-11-23 10:53:51,2017-11-23
+1511439331780,0.346,0.967,"Pipistrellus nathusii",1,"Pipistrellus pygmaeus",0,"Nyctalus leisleri",0,2017-11-23 12:15:31,2017-11-23
+1511439331780,1.32,0.995,"Pipistrellus pipistrellus",0.784,"Pipistrellus nathusii",0.204,"Nyctalus leisleri",0.009,2017-11-23 12:15:31,2017-11-23
+1511460004348,0.276,0.991,"Pipistrellus nathusii",0.961,"Nyctalus leisleri",0.039,"Pipistrellus pipistrellus",0,2017-11-23 18:00:04,2017-11-23
+1511463199692,1.309,0.955,"Pipistrellus pipistrellus",0.986,"Pipistrellus pygmaeus",0.008,"Pipistrellus nathusii",0.004,2017-11-23 18:53:19,2017-11-23
+1511466332180,1.886,0.984,"Pipistrellus nathusii",1,"Nyctalus leisleri",0,"Pipistrellus pipistrellus",0,2017-11-23 19:45:32,2017-11-23
+1511466332180,1.988,1,"Pipistrellus pipistrellus",0.742,"Pipistrellus nathusii",0.258,"Nyctalus leisleri",0,2017-11-23 19:45:32,2017-11-23
+1511466332180,2.284,0.974,"Pipistrellus pipistrellus",0.902,"Pipistrellus nathusii",0.098,"Nyctalus leisleri",0,2017-11-23 19:45:32,2017-11-23
+1511470096868,0.718,0.999,"Pipistrellus pipistrellus",1,"Pipistrellus nathusii",0,"Pipistrellus pygmaeus",0,2017-11-23 20:48:16,2017-11-23

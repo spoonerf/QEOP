@@ -1,0 +1,5 @@
+"timestamp","call_time","prob_bat","c1","p1","c2","p2","c3","p3","datetime","date"
+1512463281669,1.955,0.968,"Pipistrellus nathusii",0.992,"Pipistrellus pipistrellus",0.006,"Nyctalus leisleri",0.002,2017-12-05 08:41:21,2017-12-05
+1512463281669,2.267,0.953,"Pipistrellus nathusii",0.901,"Pipistrellus pipistrellus",0.078,"Nyctalus leisleri",0.021,2017-12-05 08:41:21,2017-12-05
+1512463281669,2.392,0.989,"Pipistrellus nathusii",0.667,"Pipistrellus pipistrellus",0.278,"Myotis daubentonii",0.02,2017-12-05 08:41:21,2017-12-05
+1512488142151,1.068,0.979,"Pipistrellus nathusii",1,"Nyctalus leisleri",0,"Pipistrellus pipistrellus",0,2017-12-05 15:35:42,2017-12-05

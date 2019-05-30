@@ -1,0 +1,15 @@
+"timestamp","call_time","prob_bat","c1","p1","c2","p2","c3","p3","datetime","date"
+1525364305236,2.57,0.956,"Pipistrellus pipistrellus",0.893,"Pipistrellus nathusii",0.107,"Nyctalus leisleri",0,2018-05-03 17:18:25,2018-05-03
+1525364305236,2.655,1,"Pipistrellus nathusii",1,"Pipistrellus pipistrellus",0,"Nyctalus leisleri",0,2018-05-03 17:18:25,2018-05-03
+1525379387352,0.739,0.994,"Pipistrellus nathusii",0.791,"Pipistrellus pipistrellus",0.206,"Pipistrellus pygmaeus",0.001,2018-05-03 21:29:47,2018-05-03
+1525379387352,0.636,0.998,"Pipistrellus nathusii",0.976,"Pipistrellus pipistrellus",0.023,"Nyctalus leisleri",0,2018-05-03 21:29:47,2018-05-03
+1525379387352,1.122,0.991,"Pipistrellus pipistrellus",0.988,"Myotis daubentonii",0.008,"Pipistrellus nathusii",0.004,2018-05-03 21:29:47,2018-05-03
+1525379387352,1.019,0.984,"Pipistrellus pipistrellus",1,"Myotis daubentonii",0,"Pipistrellus nathusii",0,2018-05-03 21:29:47,2018-05-03
+1525379387352,0.835,0.985,"Pipistrellus pipistrellus",0.999,"Pipistrellus nathusii",0.001,"Pipistrellus pygmaeus",0,2018-05-03 21:29:47,2018-05-03
+1525379387352,1.407,0.998,"Pipistrellus pipistrellus",1,"Pipistrellus nathusii",0,"Myotis daubentonii",0,2018-05-03 21:29:47,2018-05-03
+1525379387352,1.509,0.982,"Pipistrellus pipistrellus",0.963,"Pipistrellus nathusii",0.035,"Myotis daubentonii",0.001,2018-05-03 21:29:47,2018-05-03
+1525379387352,1.288,1,"Pipistrellus pipistrellus",1,"Pipistrellus nathusii",0,"Myotis daubentonii",0,2018-05-03 21:29:47,2018-05-03
+1525379387352,1.665,0.954,"Pipistrellus pipistrellus",1,"Pipistrellus nathusii",0,"Pipistrellus pygmaeus",0,2018-05-03 21:29:47,2018-05-03
+1525383629639,0.178,0.993,"Pipistrellus pygmaeus",1,"Nyctalus leisleri",0,"Plecotus auritus",0,2018-05-03 22:40:29,2018-05-03
+1525383629639,0.357,0.997,"Pipistrellus pygmaeus",1,"Nyctalus leisleri",0,"Myotis brandtii",0,2018-05-03 22:40:29,2018-05-03
+1525383629639,0.447,0.997,"Pipistrellus pygmaeus",1,"Nyctalus leisleri",0,"Myotis brandtii",0,2018-05-03 22:40:29,2018-05-03

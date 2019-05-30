@@ -1,0 +1,1 @@
+{"id": ObjectId('5b11f74ce138234659b0d777'), "sensor_name": 'sensor_bat2', "entry_added_date": datetime.datetime(2018, 6, 2, 1, 47, 56, 690000), "timestamp": datetime.datetime(2018, 6, 2, 0, 0, 40, 278000), "call_time": 0.436, "prob_bat": 0.967, "c1": 'Nyctalus noctula', "p1": 1.0, "c2": 'Nyctalus leisleri', "p2": 0.0, "c3": 'Pipistrellus pygmaeus', "p3": 0.0}

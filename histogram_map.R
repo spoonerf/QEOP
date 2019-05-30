@@ -77,10 +77,11 @@ bar.testplot_list <-
       ggplot(geo_data[geo_data$who == i,])+
         geom_bar(aes( x= factor(id, levels = month.name),y = value,group=who, fill = id),
                  position='dodge',stat='identity', color = "black") +
+        ylim(-1000, 368720)+
         labs(x = NULL, y = NULL) + 
         theme(legend.position = "none", rect = element_blank(),
-              line = element_blank(), text = element_blank()) +
-        coord_polar() 
+              line = element_blank(), text = element_blank()) 
+      #+  coord_polar() 
     )
     panel_coords <- gt_plot$layout[gt_plot$layout$name == "panel",]
     gt_plot[panel_coords$t:panel_coords$b, panel_coords$l:panel_coords$r]
@@ -88,11 +89,16 @@ bar.testplot_list <-
 
 bar_annotation_list <- lapply(1:length(unique(geo_data$who)), function(i) 
   inset(bar.testplot_list[[i]], 
-                    xmin = map.test.centroids$Lon[i] - 0.0012,
-                    xmax = map.test.centroids$Lon[i] + 0.0012,
-                    ymin = map.test.centroids$Lat[i] - 0.0012,
-                    ymax = map.test.centroids$Lat[i] + 0.0012) )
+                    xmin = map.test.centroids$Lon[i] - 0.0008,
+                    xmax = map.test.centroids$Lon[i] + 0.0008,
+                    ymin = map.test.centroids$Lat[i] - 0.0008,
+                    ymax = map.test.centroids$Lat[i] + 0.0008) )
 
 result_plot <- Reduce(`+`, bar_annotation_list, map.test)
 
 result_plot
+
+
+png("histo_bar.png", width = 4, height = 8, units = 'in', res = 750)
+result_plot# Make plot
+dev.off()

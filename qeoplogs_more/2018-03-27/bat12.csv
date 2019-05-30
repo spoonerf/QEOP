@@ -1,0 +1,17 @@
+"timestamp","call_time","prob_bat","c1","p1","c2","p2","c3","p3","datetime","date"
+1522172295502,0.297,0.995,"Pipistrellus nathusii",1,"Pipistrellus pipistrellus",0,"Nyctalus leisleri",0,2018-03-27 18:38:15,2018-03-27
+1522177880072,0.135,0.977,"Pipistrellus pygmaeus",1,"Myotis brandtii",0,"Nyctalus leisleri",0,2018-03-27 20:11:20,2018-03-27
+1522177880072,1.068,1,"Pipistrellus pygmaeus",1,"Nyctalus leisleri",0,"Pipistrellus pipistrellus",0,2018-03-27 20:11:20,2018-03-27
+1522177880072,0.981,0.96,"Pipistrellus pygmaeus",1,"Nyctalus leisleri",0,"Myotis brandtii",0,2018-03-27 20:11:20,2018-03-27
+1522177880072,0.911,0.966,"Pipistrellus pygmaeus",1,"Nyctalus leisleri",0,"Myotis brandtii",0,2018-03-27 20:11:20,2018-03-27
+1522177880072,1.304,1,"Pipistrellus pygmaeus",1,"Nyctalus leisleri",0,"Pipistrellus pipistrellus",0,2018-03-27 20:11:20,2018-03-27
+1522177880072,1.147,1,"Pipistrellus pygmaeus",1,"Nyctalus leisleri",0,"Pipistrellus pipistrellus",0,2018-03-27 20:11:20,2018-03-27
+1522177880072,1.385,1,"Pipistrellus pygmaeus",1,"Nyctalus leisleri",0,"Pipistrellus pipistrellus",0,2018-03-27 20:11:20,2018-03-27
+1522177880072,1.477,1,"Pipistrellus pygmaeus",1,"Nyctalus leisleri",0,"Pipistrellus pipistrellus",0,2018-03-27 20:11:20,2018-03-27
+1522177880072,1.217,1,"Pipistrellus pygmaeus",1,"Nyctalus leisleri",0,"Pipistrellus pipistrellus",0,2018-03-27 20:11:20,2018-03-27
+1522177880072,1.859,1,"Pipistrellus pygmaeus",1,"Nyctalus leisleri",0,"Myotis brandtii",0,2018-03-27 20:11:20,2018-03-27
+1522177880072,1.778,0.99,"Pipistrellus pygmaeus",1,"Nyctalus leisleri",0,"Myotis brandtii",0,2018-03-27 20:11:20,2018-03-27
+1522177880072,1.681,1,"Pipistrellus pygmaeus",1,"Nyctalus leisleri",0,"Pipistrellus pipistrellus",0,2018-03-27 20:11:20,2018-03-27
+1522177880072,1.578,1,"Pipistrellus pygmaeus",1,"Pipistrellus pipistrellus",0,"Nyctalus leisleri",0,2018-03-27 20:11:20,2018-03-27
+1522177880072,1.939,0.999,"Pipistrellus pygmaeus",1,"Myotis brandtii",0,"Nyctalus leisleri",0,2018-03-27 20:11:20,2018-03-27
+1522177880072,2.128,0.993,"Pipistrellus pygmaeus",0.862,"Myotis brandtii",0.096,"Plecotus auritus",0.02,2018-03-27 20:11:20,2018-03-27

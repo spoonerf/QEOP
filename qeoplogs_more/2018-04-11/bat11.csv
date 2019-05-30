@@ -1,0 +1,6 @@
+"timestamp","call_time","prob_bat","c1","p1","c2","p2","c3","p3","datetime","date"
+1523453136200,0.572,0.965,"Nyctalus leisleri",1,"Myotis brandtii",0,"Plecotus austriacus",0,2018-04-11 14:25:36,2018-04-11
+1523459391573,2.484,0.991,"Pipistrellus nathusii",0.72,"Nyctalus leisleri",0.28,"Pipistrellus pipistrellus",0,2018-04-11 16:09:51,2018-04-11
+1523462875854,0.33,0.954,"Nyctalus leisleri",1,"Pipistrellus nathusii",0,"Myotis brandtii",0,2018-04-11 17:07:55,2018-04-11
+1523463715096,2.774,0.977,"Pipistrellus pipistrellus",0.798,"Pipistrellus nathusii",0.196,"Nyctalus noctula",0.004,2018-04-11 17:21:55,2018-04-11
+1523478588655,0.308,0.998,"Pipistrellus nathusii",1,"Nyctalus leisleri",0,"Myotis brandtii",0,2018-04-11 21:29:48,2018-04-11

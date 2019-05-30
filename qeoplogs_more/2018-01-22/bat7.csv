@@ -1,0 +1,17 @@
+"timestamp","call_time","prob_bat","c1","p1","c2","p2","c3","p3","datetime","date"
+1516638986229,0.362,0.958,"Nyctalus leisleri",1,"Nyctalus noctula",0,"Pipistrellus pipistrellus",0,2018-01-22 16:36:26,2018-01-22
+1516643018896,0.027,1,"Pipistrellus pipistrellus",0.99,"Pipistrellus nathusii",0.005,"Nyctalus leisleri",0.005,2018-01-22 17:43:38,2018-01-22
+1516643018896,0.178,1,"Pipistrellus pipistrellus",0.999,"Pipistrellus nathusii",0,"Pipistrellus pygmaeus",0,2018-01-22 17:43:38,2018-01-22
+1516643018896,0.281,1,"Pipistrellus pipistrellus",1,"Myotis daubentonii",0,"Pipistrellus pygmaeus",0,2018-01-22 17:43:38,2018-01-22
+1516643018896,0.545,0.996,"Pipistrellus pygmaeus",0.999,"Pipistrellus pipistrellus",0.001,"Nyctalus leisleri",0,2018-01-22 17:43:38,2018-01-22
+1516643018896,0.399,1,"Pipistrellus pipistrellus",1,"Pipistrellus pygmaeus",0,"Myotis daubentonii",0,2018-01-22 17:43:38,2018-01-22
+1516643018896,0.986,0.995,"Pipistrellus pipistrellus",0.908,"Pipistrellus nathusii",0.06,"Nyctalus leisleri",0.016,2018-01-22 17:43:38,2018-01-22
+1516643018896,0.884,0.953,"Plecotus auritus",0.942,"Pipistrellus pygmaeus",0.037,"Myotis brandtii",0.013,2018-01-22 17:43:38,2018-01-22
+1516643018896,1.488,0.997,"Pipistrellus pipistrellus",0.961,"Pipistrellus nathusii",0.037,"Nyctalus leisleri",0.001,2018-01-22 17:43:38,2018-01-22
+1516643018896,1.39,1,"Pipistrellus pipistrellus",0.984,"Pipistrellus nathusii",0.016,"Nyctalus leisleri",0,2018-01-22 17:43:38,2018-01-22
+1516643018896,1.201,1,"Pipistrellus pipistrellus",1,"Pipistrellus nathusii",0,"Pipistrellus pygmaeus",0,2018-01-22 17:43:38,2018-01-22
+1516643018896,1.616,1,"Pipistrellus pipistrellus",0.557,"Pipistrellus nathusii",0.443,"Pipistrellus pygmaeus",0,2018-01-22 17:43:38,2018-01-22
+1516643018896,1.767,0.999,"Pipistrellus pipistrellus",0.998,"Nyctalus leisleri",0.001,"Pipistrellus nathusii",0.001,2018-01-22 17:43:38,2018-01-22
+1516643018896,2.247,1,"Pipistrellus pipistrellus",0.904,"Pipistrellus nathusii",0.094,"Nyctalus leisleri",0.002,2018-01-22 17:43:38,2018-01-22
+1516643018896,2.134,0.962,"Plecotus auritus",0.349,"Nyctalus leisleri",0.276,"Pipistrellus pipistrellus",0.266,2018-01-22 17:43:38,2018-01-22
+1516643018896,1.89,0.999,"Pipistrellus nathusii",0.846,"Pipistrellus pipistrellus",0.141,"Nyctalus leisleri",0.012,2018-01-22 17:43:38,2018-01-22
