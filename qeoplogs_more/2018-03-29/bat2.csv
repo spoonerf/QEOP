@@ -1,0 +1,4 @@
+"timestamp","call_time","prob_bat","c1","p1","c2","p2","c3","p3","datetime","date"
+1522307627715,0.151,0.984,"Nyctalus noctula",0.999,"Nyctalus leisleri",0.001,"Pipistrellus pygmaeus",0,2018-03-29 08:13:47,2018-03-29
+1522307627715,0.07,0.972,"Nyctalus noctula",0.928,"Nyctalus leisleri",0.072,"Pipistrellus pygmaeus",0,2018-03-29 08:13:47,2018-03-29
+1522307898335,2.231,0.962,"Nyctalus noctula",0.996,"Nyctalus leisleri",0.004,"Pipistrellus pipistrellus",0,2018-03-29 08:18:18,2018-03-29

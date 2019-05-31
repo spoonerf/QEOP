@@ -1,0 +1,15 @@
+"timestamp","call_time","prob_bat","c1","p1","c2","p2","c3","p3","datetime","date"
+1509433407573,2.294,0.957,"Pipistrellus nathusii",1,"Pipistrellus pipistrellus",0,"Nyctalus leisleri",0,2017-10-31 07:03:27,2017-10-31
+1509440698592,1.163,0.986,"Pipistrellus nathusii",1,"Nyctalus leisleri",0,"Pipistrellus pipistrellus",0,2017-10-31 09:04:58,2017-10-31
+1509443487083,2.209,0.957,"Pipistrellus pygmaeus",0.996,"Nyctalus leisleri",0.004,"Plecotus auritus",0,2017-10-31 09:51:27,2017-10-31
+1509444768343,2.08,0.997,"Pipistrellus nathusii",1,"Nyctalus leisleri",0,"Pipistrellus pygmaeus",0,2017-10-31 10:12:48,2017-10-31
+1509450994988,2.866,0.989,"Pipistrellus nathusii",0.958,"Nyctalus leisleri",0.042,"Pipistrellus pipistrellus",0,2017-10-31 11:56:34,2017-10-31
+1509455308131,1.917,0.984,"Pipistrellus nathusii",0.598,"Nyctalus leisleri",0.4,"Pipistrellus pipistrellus",0.002,2017-10-31 13:08:28,2017-10-31
+1509457564051,0.238,0.98,"Pipistrellus nathusii",0.97,"Pipistrellus pipistrellus",0.029,"Nyctalus leisleri",0.001,2017-10-31 13:46:04,2017-10-31
+1509466480339,1.697,0.99,"Pipistrellus nathusii",0.999,"Nyctalus leisleri",0.001,"Myotis brandtii",0,2017-10-31 16:14:40,2017-10-31
+1509471704160,0.33,0.997,"Pipistrellus nathusii",0.978,"Pipistrellus pipistrellus",0.022,"Nyctalus leisleri",0,2017-10-31 17:41:44,2017-10-31
+1509471704160,1.999,0.991,"Pipistrellus nathusii",0.842,"Pipistrellus pipistrellus",0.154,"Nyctalus leisleri",0.004,2017-10-31 17:41:44,2017-10-31
+1509471704160,2.069,0.99,"Pipistrellus pipistrellus",0.995,"Pipistrellus nathusii",0.005,"Nyctalus leisleri",0,2017-10-31 17:41:44,2017-10-31
+1509483525328,0.604,0.981,"Pipistrellus nathusii",0.762,"Pipistrellus pipistrellus",0.235,"Nyctalus leisleri",0.004,2017-10-31 20:58:45,2017-10-31
+1509486846326,1.255,0.981,"Pipistrellus pipistrellus",0.612,"Pipistrellus nathusii",0.384,"Nyctalus leisleri",0.004,2017-10-31 21:54:06,2017-10-31
+1509486846326,1.385,0.997,"Pipistrellus nathusii",1,"Nyctalus leisleri",0,"Pipistrellus pipistrellus",0,2017-10-31 21:54:06,2017-10-31

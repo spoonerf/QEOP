@@ -1,0 +1,12 @@
+"timestamp","call_time","prob_bat","c1","p1","c2","p2","c3","p3","datetime","date"
+1519457772902,0.286,0.997,"Pipistrellus pipistrellus",0.959,"Pipistrellus nathusii",0.041,"Pipistrellus pygmaeus",0,2018-02-24 07:36:12,2018-02-24
+1519465109336,1.493,0.983,"Pipistrellus nathusii",0.774,"Nyctalus leisleri",0.226,"Pipistrellus pipistrellus",0,2018-02-24 09:38:29,2018-02-24
+1519465109336,1.865,0.97,"Nyctalus leisleri",0.912,"Pipistrellus nathusii",0.081,"Pipistrellus pipistrellus",0.006,2018-02-24 09:38:29,2018-02-24
+1519466327392,1.8,1,"Pipistrellus nathusii",1,"Pipistrellus pipistrellus",0,"Nyctalus leisleri",0,2018-02-24 09:58:47,2018-02-24
+1519466327392,2.236,0.981,"Pipistrellus pipistrellus",1,"Nyctalus leisleri",0,"Pipistrellus pygmaeus",0,2018-02-24 09:58:47,2018-02-24
+1519468420696,2.462,0.965,"Pipistrellus pipistrellus",0.789,"Pipistrellus nathusii",0.21,"Nyctalus leisleri",0.001,2018-02-24 10:33:40,2018-02-24
+1519471534226,0.259,0.996,"Pipistrellus pipistrellus",0.619,"Pipistrellus nathusii",0.381,"Nyctalus leisleri",0,2018-02-24 11:25:34,2018-02-24
+1519471534226,1.116,0.999,"Pipistrellus nathusii",0.657,"Pipistrellus pipistrellus",0.343,"Nyctalus leisleri",0,2018-02-24 11:25:34,2018-02-24
+1519471579403,0.507,0.956,"Nyctalus leisleri",0.97,"Pipistrellus nathusii",0.03,"Myotis brandtii",0,2018-02-24 11:26:19,2018-02-24
+1519472391346,2.785,0.96,"Nyctalus noctula",0.962,"Nyctalus leisleri",0.038,"Pipistrellus pygmaeus",0,2018-02-24 11:39:51,2018-02-24
+1519484942448,2.226,0.993,"Pipistrellus pipistrellus",0.822,"Pipistrellus nathusii",0.172,"Pipistrellus pygmaeus",0.003,2018-02-24 15:09:02,2018-02-24

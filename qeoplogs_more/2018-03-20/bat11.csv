@@ -1,0 +1,16 @@
+"timestamp","call_time","prob_bat","c1","p1","c2","p2","c3","p3","datetime","date"
+1521532405833,1.116,0.988,"Nyctalus leisleri",0.994,"Pipistrellus nathusii",0.006,"Myotis brandtii",0,2018-03-20 07:53:25,2018-03-20
+1521532405833,1.594,0.965,"Pipistrellus nathusii",1,"Nyctalus leisleri",0,"Pipistrellus pygmaeus",0,2018-03-20 07:53:25,2018-03-20
+1521544275202,2.305,0.971,"Pipistrellus nathusii",0.984,"Nyctalus leisleri",0.015,"Pipistrellus pipistrellus",0.001,2018-03-20 11:11:15,2018-03-20
+1521544275202,2.635,0.973,"Pipistrellus nathusii",1,"Nyctalus leisleri",0,"Pipistrellus pipistrellus",0,2018-03-20 11:11:15,2018-03-20
+1521544275202,2.844,0.955,"Pipistrellus nathusii",1,"Nyctalus leisleri",0,"Pipistrellus pygmaeus",0,2018-03-20 11:11:15,2018-03-20
+1521549175706,2.02,0.975,"Pipistrellus nathusii",0.979,"Pipistrellus pipistrellus",0.021,"Nyctalus leisleri",0,2018-03-20 12:32:55,2018-03-20
+1521553562870,2.581,0.973,"Pipistrellus nathusii",1,"Nyctalus leisleri",0,"Pipistrellus pipistrellus",0,2018-03-20 13:46:02,2018-03-20
+1521553562870,2.613,0.978,"Pipistrellus pipistrellus",0.781,"Pipistrellus nathusii",0.205,"Nyctalus leisleri",0.014,2018-03-20 13:46:02,2018-03-20
+1521553562870,2.435,0.999,"Nyctalus noctula",0.949,"Nyctalus leisleri",0.048,"Pipistrellus pipistrellus",0.003,2018-03-20 13:46:02,2018-03-20
+1521553562870,2.386,0.979,"Pipistrellus nathusii",1,"Pipistrellus pipistrellus",0,"Nyctalus leisleri",0,2018-03-20 13:46:02,2018-03-20
+1521553562870,2.473,0.958,"Pipistrellus pipistrellus",0.827,"Pipistrellus nathusii",0.172,"Pipistrellus pygmaeus",0,2018-03-20 13:46:02,2018-03-20
+1521553562870,2.844,0.995,"Pipistrellus pipistrellus",0.999,"Pipistrellus nathusii",0,"Pipistrellus pygmaeus",0,2018-03-20 13:46:02,2018-03-20
+1521559764062,0.759,0.974,"Pipistrellus pipistrellus",0.66,"Pipistrellus nathusii",0.14,"Nyctalus noctula",0.129,2018-03-20 15:29:24,2018-03-20
+1521562616786,0.335,0.981,"Pipistrellus nathusii",0.999,"Nyctalus leisleri",0.001,"Myotis brandtii",0,2018-03-20 16:16:56,2018-03-20
+1521569134097,2.79,0.973,"Pipistrellus pipistrellus",0.91,"Pipistrellus nathusii",0.09,"Nyctalus leisleri",0,2018-03-20 18:05:34,2018-03-20

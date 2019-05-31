@@ -1,0 +1,15 @@
+"timestamp","call_time","prob_bat","c1","p1","c2","p2","c3","p3","datetime","date"
+1518070316221,1.594,0.969,"Nyctalus noctula",0.921,"Pipistrellus nathusii",0.079,"Nyctalus leisleri",0,2018-02-08 06:11:56,2018-02-08
+1518079031673,0.813,0.993,"Pipistrellus nathusii",1,"Pipistrellus pygmaeus",0,"Nyctalus leisleri",0,2018-02-08 08:37:11,2018-02-08
+1518079031673,1.524,0.953,"Pipistrellus nathusii",0.991,"Nyctalus noctula",0.005,"Pipistrellus pipistrellus",0.002,2018-02-08 08:37:11,2018-02-08
+1518079753522,1.557,0.953,"Pipistrellus nathusii",1,"Nyctalus leisleri",0,"Pipistrellus pygmaeus",0,2018-02-08 08:49:13,2018-02-08
+1518079753522,1.961,0.99,"Pipistrellus nathusii",0.979,"Pipistrellus pipistrellus",0.021,"Nyctalus leisleri",0,2018-02-08 08:49:13,2018-02-08
+1518079753522,2.435,0.974,"Pipistrellus nathusii",1,"Nyctalus leisleri",0,"Pipistrellus pipistrellus",0,2018-02-08 08:49:13,2018-02-08
+1518079753522,2.343,0.952,"Pipistrellus nathusii",1,"Nyctalus leisleri",0,"Pipistrellus pygmaeus",0,2018-02-08 08:49:13,2018-02-08
+1518081052937,0.889,0.963,"Pipistrellus nathusii",0.69,"Nyctalus leisleri",0.308,"Pipistrellus pipistrellus",0.002,2018-02-08 09:10:52,2018-02-08
+1518081052937,1.649,0.972,"Pipistrellus nathusii",0.916,"Nyctalus leisleri",0.049,"Pipistrellus pipistrellus",0.035,2018-02-08 09:10:52,2018-02-08
+1518081404967,1.886,0.985,"Nyctalus leisleri",0.993,"Pipistrellus pipistrellus",0.006,"Pipistrellus pygmaeus",0.001,2018-02-08 09:16:44,2018-02-08
+1518081404967,2.576,0.96,"Pipistrellus nathusii",0.944,"Nyctalus leisleri",0.056,"Pipistrellus pipistrellus",0,2018-02-08 09:16:44,2018-02-08
+1518091195826,0.491,0.993,"Pipistrellus pipistrellus",0.887,"Pipistrellus nathusii",0.112,"Nyctalus leisleri",0,2018-02-08 11:59:55,2018-02-08
+1518091195826,0.701,0.998,"Nyctalus leisleri",0.998,"Nyctalus noctula",0.001,"Pipistrellus nathusii",0,2018-02-08 11:59:55,2018-02-08
+1518091195826,1.057,0.967,"Pipistrellus nathusii",0.759,"Nyctalus leisleri",0.222,"Myotis brandtii",0.013,2018-02-08 11:59:55,2018-02-08

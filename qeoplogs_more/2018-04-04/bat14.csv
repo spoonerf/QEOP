@@ -1,0 +1,20 @@
+"timestamp","call_time","prob_bat","c1","p1","c2","p2","c3","p3","datetime","date"
+1522796927656,0.178,0.991,"Pipistrellus pygmaeus",1,"Myotis brandtii",0,"Nyctalus leisleri",0,2018-04-04 00:08:47,2018-04-04
+1522796927656,0.346,1,"Pipistrellus pygmaeus",1,"Nyctalus leisleri",0,"Pipistrellus pipistrellus",0,2018-04-04 00:08:47,2018-04-04
+1522796927656,0.528,1,"Pipistrellus pygmaeus",1,"Myotis brandtii",0,"Pipistrellus pipistrellus",0,2018-04-04 00:08:47,2018-04-04
+1522796927656,0.691,1,"Pipistrellus pygmaeus",1,"Nyctalus leisleri",0,"Pipistrellus pipistrellus",0,2018-04-04 00:08:47,2018-04-04
+1522796927656,0.943,0.998,"Pipistrellus pygmaeus",1,"Myotis brandtii",0,"Nyctalus leisleri",0,2018-04-04 00:08:47,2018-04-04
+1522796927656,2.063,0.99,"Pipistrellus pygmaeus",0.921,"Pipistrellus pipistrellus",0.059,"Myotis brandtii",0.019,2018-04-04 00:08:47,2018-04-04
+1522868648813,1.74,0.998,"Pipistrellus pipistrellus",0.775,"Pipistrellus nathusii",0.225,"Nyctalus leisleri",0,2018-04-04 20:04:08,2018-04-04
+1522869911990,0.292,0.999,"Pipistrellus pygmaeus",1,"Pipistrellus pipistrellus",0,"Nyctalus leisleri",0,2018-04-04 20:25:11,2018-04-04
+1522869911990,0.378,0.999,"Pipistrellus pygmaeus",1,"Myotis brandtii",0,"Plecotus auritus",0,2018-04-04 20:25:11,2018-04-04
+1522869911990,0.184,1,"Pipistrellus pygmaeus",1,"Nyctalus leisleri",0,"Myotis brandtii",0,2018-04-04 20:25:11,2018-04-04
+1522869911990,0.076,1,"Pipistrellus pygmaeus",1,"Nyctalus leisleri",0,"Myotis brandtii",0,2018-04-04 20:25:11,2018-04-04
+1522869911990,0.458,0.966,"Pipistrellus pygmaeus",0.999,"Nyctalus leisleri",0,"Pipistrellus pipistrellus",0,2018-04-04 20:25:11,2018-04-04
+1522869911990,0.539,0.984,"Pipistrellus pygmaeus",0.992,"Myotis brandtii",0.007,"Pipistrellus pipistrellus",0,2018-04-04 20:25:11,2018-04-04
+1522869911990,0.377,0.988,"Plecotus auritus",0.568,"Pipistrellus pygmaeus",0.358,"Nyctalus leisleri",0.043,2018-04-04 20:25:11,2018-04-04
+1522870227771,0.038,0.995,"Pipistrellus pygmaeus",1,"Nyctalus leisleri",0,"Myotis brandtii",0,2018-04-04 20:30:27,2018-04-04
+1522870227771,0.297,1,"Pipistrellus pygmaeus",1,"Nyctalus leisleri",0,"Myotis brandtii",0,2018-04-04 20:30:27,2018-04-04
+1522870227771,0.205,1,"Pipistrellus pygmaeus",1,"Nyctalus leisleri",0,"Plecotus austriacus",0,2018-04-04 20:30:27,2018-04-04
+1522870227771,0.474,0.997,"Pipistrellus pygmaeus",1,"Nyctalus leisleri",0,"Myotis brandtii",0,2018-04-04 20:30:27,2018-04-04
+1522870227771,0.382,1,"Pipistrellus pygmaeus",1,"Nyctalus leisleri",0,"Pipistrellus pipistrellus",0,2018-04-04 20:30:27,2018-04-04

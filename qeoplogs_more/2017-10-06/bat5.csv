@@ -1,0 +1,14 @@
+timestamp,call_time,prob_bat,c1,p1,c2,p2,c3,p3
+1507249181783,0.184,0.996,Nyctalus leisleri,1.0,Myotis brandtii,0.0,Pipistrellus pipistrellus,0.0
+1507249181783,0.431,0.999,Nyctalus leisleri,1.0,Nyctalus noctula,0.0,Pipistrellus pipistrellus,0.0
+1507249181783,0.691,0.999,Nyctalus leisleri,1.0,Nyctalus noctula,0.0,Myotis brandtii,0.0
+1507249181783,0.927,0.999,Nyctalus leisleri,1.0,Myotis brandtii,0.0,Pipistrellus pipistrellus,0.0
+1507249181783,1.439,0.997,Nyctalus leisleri,1.0,Myotis brandtii,0.0,Nyctalus noctula,0.0
+1507249181783,1.19,0.995,Nyctalus leisleri,0.976,Myotis brandtii,0.024,Nyctalus noctula,0.0
+1507249181783,1.681,0.998,Nyctalus leisleri,1.0,Nyctalus noctula,0.0,Myotis brandtii,0.0
+1507249181783,1.794,0.999,Nyctalus leisleri,1.0,Myotis brandtii,0.0,Pipistrellus pipistrellus,0.0
+1507249181783,1.988,0.999,Nyctalus leisleri,1.0,Nyctalus noctula,0.0,Pipistrellus pipistrellus,0.0
+1507249181783,2.263,0.982,Nyctalus leisleri,1.0,Nyctalus noctula,0.0,Pipistrellus pipistrellus,0.0
+1507249181783,2.521,1.0,Nyctalus leisleri,1.0,Nyctalus noctula,0.0,Pipistrellus pipistrellus,0.0
+1507249181783,2.262,0.992,Nyctalus leisleri,1.0,Nyctalus noctula,0.0,Pipistrellus pygmaeus,0.0
+1507249181783,2.78,0.998,Nyctalus leisleri,1.0,Nyctalus noctula,0.0,Pipistrellus pygmaeus,0.0

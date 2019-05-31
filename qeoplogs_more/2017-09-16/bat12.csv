@@ -1,0 +1,11 @@
+timestamp,call_time,prob_bat,c1,p1,c2,p2,c3,p3
+1505520510768,1.147,0.999,Nyctalus leisleri,0.938,Nyctalus noctula,0.062,Pipistrellus pipistrellus,0.0
+1505520510768,1.519,0.99,Nyctalus leisleri,1.0,Nyctalus noctula,0.0,Pipistrellus pipistrellus,0.0
+1505520510768,1.865,0.999,Nyctalus noctula,0.968,Nyctalus leisleri,0.032,Pipistrellus pipistrellus,0.0
+1505520510768,2.112,1.0,Nyctalus noctula,0.82,Nyctalus leisleri,0.18,Pipistrellus pipistrellus,0.0
+1505520510768,2.494,0.999,Nyctalus noctula,0.974,Nyctalus leisleri,0.026,Pipistrellus pipistrellus,0.0
+1505520510768,2.855,0.999,Nyctalus noctula,0.936,Nyctalus leisleri,0.064,Pipistrellus pipistrellus,0.0
+1505558216145,2.671,0.977,Pipistrellus nathusii,1.0,Nyctalus leisleri,0.0,Pipistrellus pipistrellus,0.0
+1505559161808,2.947,0.965,Pipistrellus pipistrellus,0.852,Pipistrellus nathusii,0.148,Nyctalus leisleri,0.0
+1505592884129,0.216,0.978,Nyctalus leisleri,1.0,Pipistrellus pipistrellus,0.0,Nyctalus noctula,0.0
+1505592884129,0.582,0.963,Nyctalus leisleri,1.0,Pipistrellus pipistrellus,0.0,Pipistrellus nathusii,0.0

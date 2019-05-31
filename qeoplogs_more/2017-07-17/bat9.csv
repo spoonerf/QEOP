@@ -1,0 +1,5 @@
+timestamp,call_time,prob_bat,c1,p1,c2,p2,c3,p3
+1500251159171,2.608,0.998,Pipistrellus pygmaeus,0.522,Pipistrellus pipistrellus,0.382,Nyctalus leisleri,0.036
+1500251159171,2.505,0.993,Pipistrellus pipistrellus,0.518,Pipistrellus pygmaeus,0.194,Nyctalus leisleri,0.083
+1500251159171,2.78,0.999,Pipistrellus pygmaeus,0.977,Nyctalus leisleri,0.019,Pipistrellus pipistrellus,0.004
+1500251159171,2.871,0.999,Pipistrellus pygmaeus,1.0,Nyctalus leisleri,0.0,Pipistrellus pipistrellus,0.0

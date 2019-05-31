@@ -1,0 +1,16 @@
+"timestamp","call_time","prob_bat","c1","p1","c2","p2","c3","p3","datetime","date"
+1515476549873,0.238,0.951,"Nyctalus leisleri",0.998,"Myotis brandtii",0.002,"Pipistrellus nathusii",0,2018-01-09 05:42:29,2018-01-09
+1515476549873,1.917,0.985,"Nyctalus leisleri",0.884,"Pipistrellus nathusii",0.116,"Myotis brandtii",0,2018-01-09 05:42:29,2018-01-09
+1515476549873,2.247,1,"Pipistrellus nathusii",1,"Nyctalus leisleri",0,"Myotis brandtii",0,2018-01-09 05:42:29,2018-01-09
+1515486591063,0.032,0.969,"Nyctalus leisleri",0.988,"Pipistrellus nathusii",0.01,"Pipistrellus pipistrellus",0.002,2018-01-09 08:29:51,2018-01-09
+1515486591063,0.55,0.999,"Nyctalus leisleri",0.965,"Pipistrellus nathusii",0.033,"Nyctalus noctula",0.001,2018-01-09 08:29:51,2018-01-09
+1515488999823,1.955,0.989,"Pipistrellus pygmaeus",1,"Nyctalus leisleri",0,"Plecotus auritus",0,2018-01-09 09:09:59,2018-01-09
+1515488999823,2.053,0.994,"Pipistrellus pygmaeus",1,"Nyctalus leisleri",0,"Plecotus austriacus",0,2018-01-09 09:09:59,2018-01-09
+1515495154040,1.239,1,"Pipistrellus pygmaeus",1,"Nyctalus leisleri",0,"Pipistrellus pipistrellus",0,2018-01-09 10:52:34,2018-01-09
+1515495154040,1.901,0.983,"Nyctalus noctula",0.846,"Nyctalus leisleri",0.154,"Pipistrellus pygmaeus",0.001,2018-01-09 10:52:34,2018-01-09
+1515495154040,2.403,0.956,"Pipistrellus pygmaeus",1,"Nyctalus leisleri",0,"Nyctalus noctula",0,2018-01-09 10:52:34,2018-01-09
+1515501705014,0.178,0.99,"Pipistrellus nathusii",1,"Pipistrellus pygmaeus",0,"Nyctalus leisleri",0,2018-01-09 12:41:45,2018-01-09
+1515510591807,0.005,0.999,"Pipistrellus nathusii",0.996,"Nyctalus leisleri",0.003,"Pipistrellus pipistrellus",0.001,2018-01-09 15:09:51,2018-01-09
+1515516790736,1.385,0.995,"Pipistrellus nathusii",1,"Nyctalus leisleri",0,"Pipistrellus pygmaeus",0,2018-01-09 16:53:10,2018-01-09
+1515516790736,1.784,0.998,"Pipistrellus nathusii",1,"Nyctalus leisleri",0,"Pipistrellus pygmaeus",0,2018-01-09 16:53:10,2018-01-09
+1515525100724,0.9,0.961,"Pipistrellus nathusii",0.726,"Nyctalus leisleri",0.268,"Pipistrellus pipistrellus",0.003,2018-01-09 19:11:40,2018-01-09

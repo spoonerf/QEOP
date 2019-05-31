@@ -1,0 +1,4 @@
+timestamp,call_time,prob_bat,c1,p1,c2,p2,c3,p3
+1504884690122,0.232,0.989,Pipistrellus nathusii,1.0,Pipistrellus pygmaeus,0.0,Nyctalus leisleri,0.0
+1504885872227,1.886,0.96,Pipistrellus nathusii,1.0,Pipistrellus pipistrellus,0.0,Nyctalus leisleri,0.0
+1504911585351,0.696,0.969,Pipistrellus pipistrellus,0.994,Pipistrellus nathusii,0.006,Myotis daubentonii,0.0

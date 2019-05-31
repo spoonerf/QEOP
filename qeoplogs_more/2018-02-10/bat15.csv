@@ -1,0 +1,15 @@
+"timestamp","call_time","prob_bat","c1","p1","c2","p2","c3","p3","datetime","date"
+1518244396344,2.478,0.989,"Pipistrellus pipistrellus",1,"Pipistrellus nathusii",0,"Nyctalus leisleri",0,2018-02-10 06:33:16,2018-02-10
+1518246546393,2.592,1,"Pipistrellus pipistrellus",1,"Pipistrellus nathusii",0,"Pipistrellus pygmaeus",0,2018-02-10 07:09:06,2018-02-10
+1518250844744,0.959,0.967,"Pipistrellus pipistrellus",0.999,"Nyctalus leisleri",0.001,"Pipistrellus nathusii",0,2018-02-10 08:20:44,2018-02-10
+1518250844744,1.509,0.959,"Pipistrellus pipistrellus",0.951,"Pipistrellus nathusii",0.034,"Pipistrellus pygmaeus",0.009,2018-02-10 08:20:44,2018-02-10
+1518250844744,2.936,0.962,"Pipistrellus nathusii",0.999,"Pipistrellus pipistrellus",0.001,"Nyctalus leisleri",0,2018-02-10 08:20:44,2018-02-10
+1518251810266,2.215,0.987,"Pipistrellus pygmaeus",1,"Nyctalus leisleri",0,"Pipistrellus pipistrellus",0,2018-02-10 08:36:50,2018-02-10
+1518253513131,1.062,0.998,"Pipistrellus pipistrellus",1,"Pipistrellus pygmaeus",0,"Pipistrellus nathusii",0,2018-02-10 09:05:13,2018-02-10
+1518256290975,2.365,0.971,"Pipistrellus pipistrellus",1,"Pipistrellus nathusii",0,"Pipistrellus pygmaeus",0,2018-02-10 09:51:30,2018-02-10
+1518260315962,2.731,0.994,"Pipistrellus pipistrellus",0.999,"Pipistrellus nathusii",0.001,"Nyctalus leisleri",0,2018-02-10 10:58:35,2018-02-10
+1518260962294,1.805,0.98,"Pipistrellus pipistrellus",1,"Pipistrellus nathusii",0,"Pipistrellus pygmaeus",0,2018-02-10 11:09:22,2018-02-10
+1518261244944,1.822,0.962,"Pipistrellus pipistrellus",1,"Pipistrellus pygmaeus",0,"Nyctalus leisleri",0,2018-02-10 11:14:04,2018-02-10
+1518264595886,1.616,0.958,"Pipistrellus pygmaeus",1,"Nyctalus leisleri",0,"Pipistrellus pipistrellus",0,2018-02-10 12:09:55,2018-02-10
+1518264595886,2.02,0.991,"Pipistrellus pygmaeus",1,"Nyctalus leisleri",0,"Pipistrellus pipistrellus",0,2018-02-10 12:09:55,2018-02-10
+1518264595886,2.834,0.994,"Pipistrellus pygmaeus",1,"Nyctalus leisleri",0,"Pipistrellus pipistrellus",0,2018-02-10 12:09:55,2018-02-10

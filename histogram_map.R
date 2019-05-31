@@ -118,3 +118,8 @@ bar_annotation_list <- lapply(1:length(unique(geo_data$who)), function(i)
 result_plot <- Reduce(`+`, bar_annotation_list, map.test)
 
 result_plot
+
+
+png("histo_bar.png", width = 4, height = 8, units = 'in', res = 750)
+result_plot# Make plot
+dev.off()
