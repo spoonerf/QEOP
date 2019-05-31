@@ -60,25 +60,43 @@ lnd[2]<-lnd[2]-buff
 lnd[3]<-lnd[3]+buff
 lnd[4]<-lnd[4]+buff
 
+####habitat
+qeop_vec<-readOGR(dsn ="D:/Fiona/QEOP/Habitat_Data/HabitatMaps",layer = "QEOP_Habitat_Diss")
+qeop<-raster(here("Habitat_Data/HabitatMaps/QEOP_Habitat_10cm.tif"))
+
+proj4string(qeop)
+
+wgs = CRS("+init=epsg:4326")
+
+#qeop_wgs<-spTransform(qeop,wgs)
+qeop_wgs<-projectRaster(qeop, crs = "+init=epsg:4326")
+
+qeop_wgs_crop<-crop(qeop_wgs, lnd)
+qeop_wgs_crop[qeop_wgs_crop ==2]<-NA
+
+test_spdf <- as(qeop_wgs_crop, "SpatialPixelsDataFrame")
+test_df <- as.data.frame(test_spdf)
+colnames(test_df) <- c("value", "x", "y")
+
+
+#qeop_wgs_crop_pol <- rasterToPolygons(qeop_wgs_crop)
+
+####
+
+
 map.test.centroids <- data.frame(Lon = all_bats$Lon, Lat = all_bats$Lat, OBJECTID = all_bats$deployment_id)
 map.test.centroids<-unique(map.test.centroids)
 
 
-map.test <- ggmap(get_map(location = lnd, source = "stamen", maptype = "toner", color = "bw", force = TRUE))+
+map.test <- ggmap(get_map(location = lnd, source = "stamen", maptype = "toner", color = "bw"))+#, force = TRUE))+
 # geom_point(data=map.test.centroids, aes(x=Lon, y=Lat), size=2, alpha=6/10)+
-  labs(x = "Longitude", y = "Latitude")
+  labs(x = "Longitude", y = "Latitude")+
+  geom_tile(data=test_df, aes(x=x, y=y, fill=value), alpha=0.8)
 
 map.test
 
-#get centroids
 
-#Plot map
-# map.test <- ggplot(kt_geom)+
-#   geom_polygon(aes(long, lat, group=group), fill="white")+
-#   coord_fixed()+
-#   geom_path(color="gray48", mapping=aes(long, lat, group=group), size=0.2)+
-#   geom_point(data=map.test.centroids, aes(x=x, y=y), size=2, alpha=6/10)
-# 
+
 
 geo_data <- data.frame(who=monthly_bats$deployment_id,
                        value=monthly_bats$sum_month,
@@ -97,12 +115,11 @@ bar.testplot_list <-
       ggplot(geo_data[geo_data$who == i,])+
         geom_bar(aes( x= factor(id, levels = month.name),y = log10(value+1),group=as.factor(who), fill = col),
                  position='dodge',stat='identity', colour = "black") +
-        scale_fill_poke(pokemon = 71, spread = 4)+
+                scale_fill_poke(pokemon = 71, spread = 4)+
         labs(x = NULL, y = NULL) + 
         theme(legend.position = "none", rect = element_blank(),
               line = element_blank(), text = element_blank())+
-       ylim(-0.5, 10) 
-      #+ coord_polar() 
+       ylim(-0.5, 10) + coord_equal() 
     )
     panel_coords <- gt_plot$layout[gt_plot$layout$name == "panel",]
     gt_plot[panel_coords$t:panel_coords$b, panel_coords$l:panel_coords$r]
