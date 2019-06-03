@@ -8,6 +8,9 @@ library(dplyr)
 library(ggmap)
 library(lubridate)
 library(palettetown)
+library(raster)
+library(here)
+library(sf)
 
 all_bats<-readRDS("all_sensor_deployments.RDS")
 
@@ -62,17 +65,38 @@ lnd[4]<-lnd[4]+buff
 
 ####habitat
 qeop_vec<-readOGR(dsn ="D:/Fiona/QEOP/Habitat_Data/HabitatMaps",layer = "QEOP_Habitat_Diss")
-qeop<-raster(here("Habitat_Data/HabitatMaps/QEOP_Habitat_10cm.tif"))
+qeop_sf<-st_as_sf(qeop_vec)
+
+qeop_sf_wgs<-st_transform(qeop_sf, "+init=epsg:4326")
+
+alpha_val<-0.5
+
+cols <- c("Grassland" = alpha("darkolivegreen3", alpha_val), "Water" = alpha("deepskyblue3", alpha_val), "Parkland" = alpha("darkkhaki", alpha_val), "Trees" = alpha("forestgreen", alpha_val))
+cols <- c("Grassland" = "darkolivegreen3", "Water" = "deepskyblue3", "Parkland" = "darkkhaki", "Trees" = "forestgreen")
+
+
+
+ggplot()+
+  geom_sf(data = qeop_sf_wgs, aes(fill = QEOP_Hab),colour = NA)+
+  scale_fill_manual(values = cols)+theme_bw()
+
+
+qeop<-raster(here::here("Habitat_Data/HabitatMaps/QEOP_Habitat_10cm.tif"))
 
 proj4string(qeop)
 
 wgs = CRS("+init=epsg:4326")
 
 #qeop_wgs<-spTransform(qeop,wgs)
-qeop_wgs<-projectRaster(qeop, crs = "+init=epsg:4326")
+#qeop_wgs<-projectRaster(qeop, crs = "+init=epsg:4326")
+
+#writeRaster(qeop_wgs, here::here("Habitat_Data/HabitatMaps/QEOP_Habitat_10cm_WGS84.tif"))
+qeop_wgs<-raster(here::here("Habitat_Data/HabitatMaps/QEOP_Habitat_10cm_WGS84.tif"))
+
+
 
 qeop_wgs_crop<-crop(qeop_wgs, lnd)
-qeop_wgs_crop[qeop_wgs_crop ==2]<-NA
+qeop_wgs_crop[qeop_wgs_crop ==2]<-NA  #removing the habitats we don't want - temporary landscapes and living roofs
 
 test_spdf <- as(qeop_wgs_crop, "SpatialPixelsDataFrame")
 test_df <- as.data.frame(test_spdf)
@@ -89,9 +113,9 @@ map.test.centroids<-unique(map.test.centroids)
 
 
 map.test <- ggmap(get_map(location = lnd, source = "stamen", maptype = "toner", color = "bw"))+#, force = TRUE))+
-# geom_point(data=map.test.centroids, aes(x=Lon, y=Lat), size=2, alpha=6/10)+
   labs(x = "Longitude", y = "Latitude")+
-  geom_tile(data=test_df, aes(x=x, y=y, fill=value), alpha=0.8)
+  geom_sf(data = qeop_sf_wgs, aes(fill = QEOP_Hab),colour = NA, inherit.aes = FALSE)+
+  scale_fill_manual(values = cols)
 
 map.test
 
