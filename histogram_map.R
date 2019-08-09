@@ -12,19 +12,29 @@ library(raster)
 library(here)
 library(sf)
 
+
 all_bats<-readRDS("all_sensor_deployments.RDS")
 
-colnames(all_bats)[c(1,3)]<-c("sensor_id", "count_date")
+all_bats<-readRDS("hourly_bats_complete_cases_for_models_sun_subs_lag_clim.RDS")
+
+all_bats$month<-month(all_bats$time_hour)
+all_bats$hour<-hour(all_bats$time_hour)
+
+all_bats<-all_bats %>%
+          filter(deployment_id != "1.1" & deployment_id != "6.1" & deployment_id != "11.1") %>% #high rates of false positives
+          filter(deployment_id != "3.1" & deployment_id != "4.2" & deployment_id != "5.1"& deployment_id != "15.1")   #no record of false positive/false negative rates
+
 
 #all_bats<-read.csv("all_sensors_all_calls.csv", stringsAsFactors = FALSE)
-all_bats<-distinct(select(all_bats, c("sensor_id", "Lat", "Lon", "Habitat", "month", "date", "count_date", "deployment_id")))
-all_bats$count_date[is.na(all_bats$count_date)]<-0
+all_bats<- all_bats%>%
+  group_by(deployment_id, month, lat, lon, Habitat)%>%
+  summarise(sum_month = sum(count))%>%
+  ungroup()
 
 
-months_all<-data.frame(deployment_id = rep(unique(all_bats$deployment_id), each =12),month = c("January", "February", "March", "April", "May", "June", "July", 
-                                              "August", "September", "October", "November", "December"))
+months_all<-data.frame(deployment_id = rep(unique(all_bats$deployment_id), each =12),month = 1:12)
 
-all_habs<-unique(merge(months_all, all_bats[,c("deployment_id", "Lat", "Lon", "Habitat")], by = c("deployment_id")))
+all_habs<-unique(merge(months_all, all_bats[,c("deployment_id", "lat", "lon", "Habitat")], by = c("deployment_id")))
 
 all_bats$deployment_id<-as.character(all_bats$deployment_id)
 all_habs$deployment_id<-as.character(all_habs$deployment_id)
@@ -32,47 +42,22 @@ all_habs$deployment_id<-as.character(all_habs$deployment_id)
 all_habs<-all_habs%>%
   filter(deployment_id != "5.2")
 
-monthly_bats<-all_bats %>%
-  group_by(month, deployment_id)%>%
-  mutate(sum_month = sum(count_date))%>%
-  select(deployment_id, Lat, Lon, Habitat, month, sum_month)%>%
-  filter(deployment_id != "5.2")%>%
-  distinct()
+# monthly_bats<-all_bats %>%
+#   group_by(month, deployment_id)%>%
+#   mutate(sum_month = sum(count_date))%>%
+#   dplyr::select(deployment_id, Lat, Lon, Habitat, month, sum_month)%>%
+#   filter(deployment_id != "5.2")%>%
+#   distinct()
 
 
-monthly_bats<-merge(all_habs, monthly_bats, by = c("deployment_id", "month", "Lat", "Lon", "Habitat"), all = TRUE)  
+monthly_bats<-merge(all_habs, all_bats, by = c("deployment_id", "month", "lat", "lon", "Habitat"), all = TRUE)  
 
 monthly_bats$sum_month[is.na(monthly_bats$sum_month)]<-0
 
 
 ####average daily count when active in each month
 
-all_sensors_df<-readRDS("all_sensors_daily.RDS")
-
-all_sensors_df$month<-month(all_sensors_df$date)
-
-all_sensors_df$month<-month.name[all_sensors_df$month]
-
-all_active_df<-all_sensors_df %>%
-  filter(deployment_id != "5.2" & deployment_id != "4.1")%>%
-  group_by(deployment_id,month)%>%
-  mutate(total_days = n_distinct(date),  inactive_days = sum(!is.na(inactive_week)),active_days = total_days - inactive_days, active_days_count = sum(na.omit(count)), average_daily_active_counts = active_days_count/active_days) %>%
-  select(month, deployment_id, inactive_week, average_daily_active_counts, Lat, Lon, Habitat)%>%
-  #filter(is.na(inactive_week))%>%
-  distinct()
-
-
-monthly_bats<-merge(all_habs, all_active_df, by = c("deployment_id", "month", "Lat", "Lon", "Habitat"), all = TRUE)  
-
-monthly_bats$sum_month<-monthly_bats$average_daily_active_counts
-
-monthly_bats$sum_month[is.na(monthly_bats$average_daily_active_counts)]<-0
-
-
-
-
-
-xy<-cbind(monthly_bats$Lon, monthly_bats$Lat)
+xy<-cbind(monthly_bats$lon, monthly_bats$lat)
 xy<-unique(xy)
 S<-SpatialPoints(xy)
 proj4string(S)<-CRS("+init=epsg:4326")
@@ -98,7 +83,6 @@ qeop_sf_wgs<-st_transform(qeop_sf, "+init=epsg:4326")
 
 alpha_val<-0.5
 
-
 qeop<-raster(here::here("Habitat_Data/HabitatMaps/QEOP_Habitat_10cm.tif"))
 
 proj4string(qeop)
@@ -110,8 +94,6 @@ wgs = CRS("+init=epsg:4326")
 
 #writeRaster(qeop_wgs, here::here("Habitat_Data/HabitatMaps/QEOP_Habitat_10cm_WGS84.tif"))
 qeop_wgs<-raster(here::here("Habitat_Data/HabitatMaps/QEOP_Habitat_10cm_WGS84.tif"))
-
-
 
 qeop_wgs_crop<-crop(qeop_wgs, lnd)
 qeop_wgs_crop[qeop_wgs_crop ==2]<-NA  #removing the habitats we don't want - temporary landscapes and living roofs
@@ -127,13 +109,13 @@ colnames(test_df) <- c("value", "x", "y")
 cols <- c("Grassland" = alpha("darkolivegreen3", alpha_val), "Water" = alpha("deepskyblue3", alpha_val), "Parkland" = alpha("darkkhaki", alpha_val), "Trees" = alpha("forestgreen", alpha_val))
 cols <- c("Grassland" = "darkolivegreen3", "Water" = "deepskyblue3", "Parkland" = "darkkhaki", "Trees" = "forestgreen")
 
-map.test.centroids <- data.frame(Lon = all_bats$Lon, Lat = all_bats$Lat, OBJECTID = all_bats$deployment_id)
+map.test.centroids <- data.frame(Lon = all_bats$lon, Lat = all_bats$lat, OBJECTID = all_bats$deployment_id)
 map.test.centroids<-unique(map.test.centroids)
 
 map.test.centroids<-merge(unique(all_bats[,c("Habitat", "deployment_id")]), map.test.centroids, by.x = "deployment_id", by.y= "OBJECTID")
 
 
-map.test <- ggmap(get_map(location = lnd, source = "stamen", maptype = "toner-lite", color = "bw"))+#, force = TRUE))+
+map.test <- ggmap(get_map(location = lnd, source = "stamen", maptype = "toner-lite", color = "bw"), force = TRUE)+
   labs(x = "Longitude", y = "Latitude", fill = "Habitat")+
   geom_sf(data = qeop_sf_wgs, aes(fill = QEOP_Hab),colour = NA, inherit.aes = FALSE)+
   scale_fill_manual(values = cols)+
@@ -164,10 +146,10 @@ map.test.centroids <- map.test.centroids[order(map.test.centroids$deployment_id)
 
 
 geo_data$col<-NULL
-geo_data$col[geo_data$id == "January" | geo_data$id == "February" | geo_data$id == "March"]<-"First"
-geo_data$col[geo_data$id == "April" | geo_data$id == "May" | geo_data$id == "June"]<-"Second"
-geo_data$col[geo_data$id == "July" | geo_data$id == "August"| geo_data$id == "September"]<-"Third"
-geo_data$col[geo_data$id == "October" | geo_data$id == "November" | geo_data$id == "December"]<-"Fourth"
+geo_data$col[geo_data$id == 1| geo_data$id == 2 | geo_data$id == 3]<-"First"
+geo_data$col[geo_data$id == 4 | geo_data$id == 5 | geo_data$id == 6]<-"Second"
+geo_data$col[geo_data$id == 7 | geo_data$id == 8| geo_data$id == 9]<-"Third"
+geo_data$col[geo_data$id == 10| geo_data$id == 11 |geo_data$id == 12]<-"Fourth"
 
 bar.testplot_list <- 
   lapply(unique(geo_data$who), function(i) { 
