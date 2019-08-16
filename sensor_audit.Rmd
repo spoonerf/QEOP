@@ -423,8 +423,6 @@ map <- openmap(c(max_lat,min_lon), c(min_lat,max_lon), zoom = NULL,type = "osm",
 ```
 
 ```{r}
-library(ggmap)
-
 xy<-cbind(all_active_df$Lon, all_active_df$Lat)
 S<-SpatialPoints(xy)
 lnd<-bbox(S)
@@ -453,6 +451,35 @@ dev.off()
 
 
 ```
+`
+```{r}
+xy<-cbind(all_active_df$Lon, all_active_df$Lat)
+S<-SpatialPoints(xy)
+lnd<-bbox(S)
+buff<-0.0015
+
+lnd[1]<-lnd[1]-buff
+lnd[2]<-lnd[2]-buff
+lnd[3]<-lnd[3]+buff
+lnd[4]<-lnd[4]+buff
+
+lnd.b1 <- ggmap(get_map(location = lnd))
+
+qeop<-lnd.b1 +  geom_point(aes(size = average_daily_active_counts, x = Lon, y = Lat, fill = Habitat), colour = "black",pch=21,data = all_active_df) + 
+  scale_size_continuous(range=c(5, 15)) +
+  labs(size = "Daily Average\nSensor Detections") + 
+  theme_bw()+
+  guides(fill=guide_legend(override.aes=list(size=5)))+
+  xlab("Longitude")+
+  ylab("Latitude")
+
+
+png("QEOP_Map.png", width = 8, height = 8, units = 'in', res = 750)
+qeop# Make plot
+dev.off()
+
+```
+
 ####Figure 3: Red line shows where there have been no detections for fourteen continuous days
 
 ```{r, echo = FALSE}
@@ -768,6 +795,9 @@ all_sens_info<-all_sens_info %>%
   group_by(date_ch)%>%
   mutate(count_date = n())%>%
   ungroup()
+
+#write.csv(all_sens_info, "all_sensors_all_calls.csv", row.names = FALSE)
+
 ```
 
 ####Figure 5: Distribution of total daily calls for each month 
