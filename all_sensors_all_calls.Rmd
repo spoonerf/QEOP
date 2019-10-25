@@ -209,65 +209,26 @@ colnames(ce_sensors)<-colnames(os_sens_df)
 
 all_calls_df<-rbind(ce_sensors, os_sens_df)
 
-#write.csv(all_calls_df, "all_sensors_records_2019_10_25.csv", row.names = FALSE)
-
-```
-
-
-Adding a month column and formatting data for plotting record data over the year
-```{r}
-#ce_sens_df<-read.csv("all_sensors_ce_records.csv")
-#ce_sens_df<-read.csv("all_sensors_ce_records_2019_10_10.csv")
-#os_sens_df<-read.csv("all_sensors_os_records_May_2019.csv")
-#ce_sens_df$call_time<-as.numeric(as.character(ce_sens_df$call_time))
-
-
-all_sens_df<-vroom::vroom("all_sensors_records_2019_10_25.csv")
-
-
-
-all_sens_df<-rbind(ce_sens_df, os_sens_df)
-
 sensor_info<-read.csv("sensor_info.csv")
-sensor_info$sensor_no<-gsub("\\..*","",sensor_info$deployment_id)
-
-
 all_sens_info<-merge(all_sens_df, sensor_info, by.x = "sensor_id", by.y = "sensor_no")
 
-#write.csv(all_sens_info, "all_bat_calls.csv", row.names = FALSE)
 
-#write.csv(all_sens_info, "all_bat_calls_2019_10_10.csv", row.names = FALSE)
-
-
-
+#write.csv(all_sens_info, "all_sensors_info_records_2019_10_25.csv", row.names = FALSE)
 
 ```
+
 
 
 Adding deployment information column
 
 ```{r, echo = FALSE}
-
-
-# all_sensors_merge<-all_sensors_merge %>%
-#  # filter(sensor_no == 4 & date >= as.Date("2018-05-14"))
-#   mutate(sensor_no=replace(sensor_no, sensor_no == 4 & date >= as.Date("2018-05-14"), 4.5))
+all_sens_info<-vroom::vroom("all_sensors_info_records_2019_10_25.csv")
 
 all_sens_info$deployment<-1
-
-
-#changing the deployment of all sensor four records after 14th May 2018 to deploment 2
-#Update all deployments here
-#When did 5 move to Duncan's garden??
-#6 might've moved?
-#8 has or is due to be removed due to building work - is likely to be in the bin.
 
 all_sens_info[as.Date(as.character(all_sens_info$date)) > as.Date(as.character("2018-05-14")) & all_sens_info$sensor_id == 4,]<-all_sens_info %>%
   filter(as.Date(as.character(date)) > as.Date("2018-05-14") & sensor_id == 4)%>%
   mutate(deployment=replace(deployment, deployment==1, 2), Lat = replace(Lat, Lat==51.5367, 51.536553), Lon = replace(Lon, Lon==-0.0128, -0.013169))
-
-# all_sens_info %>%
-# filter(sensor_id == 4 & date >= as.Date("2018-05-14"))
 
 all_sens_info[as.Date(as.character(all_sens_info$date)) > as.Date("2018-08-07") & all_sens_info$sensor_id == 5,]<-all_sens_info %>%
   filter(as.Date(as.character(date)) > as.Date("2018-08-07") & sensor_id == 5)%>%
