@@ -314,7 +314,7 @@ all_sensors_merge %>%
 ```{r, echo =FALSE}
 ggplot(all_sensors_merge, aes(x = date, y = deployment_id, group = deployment_id))+
   geom_line(color = "steelblue",aes(size = log10(count)))+
-  scale_y_discrete(limits = c("15.1", "14.1", "13.1","12.1", "11.1","10.1", "9.1", "8.1"," 7.1","6.1","5.2","5.1","4.2","4.1","3.1","2.1","1.1"))+
+  scale_y_discrete(limits = c("15.1", "14.1", "13.1","12.1", "11.1","10.1", "9.1", "8.1","7.1","6.1","5.2","5.1","4.2","4.1","3.1","2.1","1.1"))+
   #scale_y_reverse(breaks = seq(1, length(unique(all_sensors_merge$deployment_id)), by = 1))+
   scale_x_date(date_breaks = "1 month", date_labels = "%m-%Y")+
   theme_bw()+
@@ -336,7 +336,7 @@ ggplot(all_sensors_merge, aes(x = date, y = deployment_id, group = deployment_id
 ggplot(all_sensors_merge, aes(x = date, y = deployment_id, group = deployment_id))+
   geom_line(color = "steelblue",aes(size = count))+
   #scale_y_reverse(breaks = seq(1, 16, by = 1))+
-  scale_y_discrete(limits = c("15.1", "14.1", "13.1","12.1", "11.1","10.1", "9.1", "8.1"," 7.1","6.1","5.2","5.1","4.2","4.1","3.1","2.1","1.1"))+
+  scale_y_discrete(limits = c("15.1", "14.1", "13.1","12.1", "11.1","10.1", "9.1", "8.1","7.1","6.1","5.2","5.1","4.2","4.1","3.1","2.1","1.1"))+
   scale_x_date(date_breaks = "1 month", date_labels = "%m-%Y")+
   theme_bw()+
   #theme(panel.background = element_blank())+
