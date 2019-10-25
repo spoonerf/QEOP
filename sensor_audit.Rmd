@@ -28,19 +28,34 @@ Reading in the data from the CE Tools Server:
 
 #dump<-read.table("qeop_dump_all.csv", fill=T, sep=",")
 
-dump<-read.table("qeop_dump_2019_02_23.csv", fill=T, sep=",")
+dump_test<-read.table("qeop_dump_2019_02_23.csv", fill=T, sep=",")
+
+
+dump<-read.table("all_bat_2019_09_02a.csv", fill=T, sep=",",skip = 4)
+dumpb<-read.table("all_bat_2019_09_02b.csv", fill=T, sep=",", skip = 1)
+
+dump_all<-rbind(dump, dumpb)
+
 
 ##adding in a column to identify each row with a sensor
 
-dump$sensor<-NA
+dump_all$sensor<-NA
 for (i in 1:15){
-  start_id<-min(which(grepl( paste("qeop_batstore_",i, sep=""),dump[,1])))
-  end_id<-max(which(grepl( paste("qeop_batstore_",i, sep=""),dump[,1])))
-  dump[start_id:end_id,]$sensor<-paste("Sensor_",i,sep="")
-  #print(i)
+  start_id<-min(which(grepl( paste("qeop_batstore_",i, sep=""),dump_all[,1])))
+  end_id<-max(which(grepl( paste("qeop_batstore_",i, sep=""),dump_all[,1])))
+  dump_all[start_id:end_id,]$sensor<-paste("Sensor_",i,sep="")
+  print(i)
 }
 
-table(dump$sensor)
+table(dump_all$sensor)
+
+dump_all$sensor[1:776]<-1
+
+dump_all$sensor[1638302:1639016]<-7
+
+dump<-dump_all[!is.na(dump_all$sensor),]
+
+
 
 
 ```
@@ -216,6 +231,8 @@ Additional information about the sensors from the documentation
 
 sensor_info<-read.csv("sensor_info.csv")
 
+sensor_info$sensor_no<-gsub("\\..*","",sensor_info$deployment_id)
+
 all_sensors_merge<-merge(all_sensors_merge, sensor_info, by="sensor_no")
 
 ```
@@ -240,7 +257,7 @@ all_sensors_merge<-all_sensors_merge %>%
 
 #save(all_sensors_merge, file = "all_sensor_data_2017-07-12_2019-2019_01_14")
 #save(all_sensors_merge, file = "all_sensor_data_2017_07_12-2019_02_23b")
-
+#save(all_sensors_merge, file = "all_sensor_data_2017_07_12-2019_09_02")
 
 ```
 
@@ -248,7 +265,8 @@ all_sensors_merge<-all_sensors_merge %>%
 
 #load("all_sensor_data_2017-07-12_2019-2019_01_14")
 #load("all_sensor_data_2017_07_12-2019_02_23")
-load("all_sensor_data_2017_07_12-2019_02_23b")
+#load("all_sensor_data_2017_07_12-2019_02_23b")
+load("all_sensor_data_2017_07_12-2019_09_02")
 
 ```
 
@@ -281,6 +299,16 @@ all_sensors_merge$deployment_id<-paste(all_sensors_merge$sensor_no, all_sensors_
 
 ```
 
+
+```{r}
+all_sensors_merge %>% 
+    filter(!is.na(count)) %>% 
+    group_by(deployment_id) %>% 
+    summarise(count_sum = sum(count)) %>% 
+    dplyr::select(deployment_id, count_sum) %>% 
+    arrange(-count_sum)
+
+```
 ####Figure 1: Plot of each sensor from `r min(all_sensors_merge$date)` to `r max(all_sensors_merge$date)`, the height of each column relates to the number of detections in each day:
 
 ```{r, echo =FALSE}
@@ -353,20 +381,27 @@ for (i in 1:length(unique(all_sensors_merge$sensor_no))){
 
 all_sensors_df$inactive<-all_sensors_df$days_inactive
 
-all_sensors_df$inactive_week[all_sensors_df$inactive <7]<-NA
+all_sensors_df$inactive_week[all_sensors_df$inactive <7 | is.na(all_sensors_df$inactive)]<-NA
 
 all_sensors_df$inactive_week[all_sensors_df$inactive >=7]<-1
 
-all_sensors_df$inactive_fnight[all_sensors_df$inactive <14]<-NA
+all_sensors_df$count[is.na(all_sensors_df$count)]<-0
 
-all_sensors_df$inactive_fnight[all_sensors_df$inactive >=14]<-1
+all_sensors_df$count[which(all_sensors_df$days_inactive >= 7)]<-NA
 
-all_sensors_df$inactive_month[all_sensors_df$inactive <30]<-NA
 
-all_sensors_df$inactive_month[all_sensors_df$inactive >=30]<-1
+# 
+# all_sensors_df$inactive_fnight[all_sensors_df$inactive <14]<-NA
+# 
+# all_sensors_df$inactive_fnight[all_sensors_df$inactive >=14]<-1
+
+# all_sensors_df$inactive_month[all_sensors_df$inactive <30]<-NA
+# 
+# all_sensors_df$inactive_month[all_sensors_df$inactive >=30]<-1
 
 #saveRDS(all_sensors_df, "all_sensors_daily.RDS")
 
+#write.csv(all_sensors_df, "all_sensors_daily.csv")
 
 ```
 
@@ -378,7 +413,7 @@ all_sensors_df<-readRDS("all_sensors_daily.RDS")
 
 
 ggplot(all_sensors_df, aes(x = date, y = deployment_id, group = deployment_id))+
-  geom_line(color = "red", aes(x = date, y = deployment_id,size = log10(inactive_week)), alpha = 0.5)+
+ # geom_line(color = "red", aes(x = date, y = deployment_id,size = log10(inactive_week)), alpha = 0.5)+
   geom_line(color = "steelblue",aes(size = log10(count)))+
     #scale_y_reverse(breaks = seq(1, 16, by = 1))+
   scale_y_discrete(limits = c("15.1", "14.1", "13.1","12.1", "11.1","10.1", "9.1", "8.1","7.1","6.1","5.2","5.1","4.2","4.1","3.1","2.1","1.1"))+
@@ -419,7 +454,7 @@ map <- openmap(c(max_lat,min_lon), c(min_lat,max_lon), zoom = NULL,type = "osm",
   group_by(deployment_id)%>%
   mutate(total_days = n_distinct(date),  inactive_days = sum(!is.na(inactive_week)),active_days = total_days - inactive_days, active_days_count = sum(na.omit(count)), average_daily_active_counts = active_days_count/active_days) %>%
   filter(is.na(inactive_week))%>%
-  select(date,deployment_id, inactive_week, average_daily_active_counts, Lat, Lon, Habitat)%>%
+  dplyr::select(date,deployment_id, inactive_week, average_daily_active_counts, Lat, Lon, Habitat)%>%
   distinct()
 
 
@@ -429,8 +464,7 @@ map <- openmap(c(max_lat,min_lon), c(min_lat,max_lon), zoom = NULL,type = "osm",
 ```
 
 ```{r}
-
-all_active_df<-readRDS("bat_activity_qeop.RDS")
+#all_active_df<-readRDS("bat_activity_qeop.RDS")
 
 library(ggmap)
 library(sp)
@@ -685,7 +719,7 @@ ce_sensors<-data.frame(dump[,c("sensor","datetime","call_time","prob_bat","speci
 colnames(ce_sensors)<-colnames(os_sens_df)
 ce_sensors$sensor_id<- gsub("[^0-9.]", "", ce_sensors$sensor_id)
 
-#write.csv(ce_sensors, "all_sensors_ce_records.csv", row.names = FALSE)
+#write.csv(ce_sensors, "all_sensors_ce_records_2019_10_10.csv", row.names = FALSE)
 
 ```
 
@@ -697,7 +731,8 @@ library(scales)
 library(lubridate)
 library(ggplot2)
 
-ce_sens_df<-read.csv("all_sensors_ce_records.csv")
+#ce_sens_df<-read.csv("all_sensors_ce_records.csv")
+ce_sens_df<-read.csv("all_sensors_ce_records_2019_10_10.csv")
 os_sens_df<-read.csv("all_sensors_os_records_May_2019.csv")
 
 ce_sens_df$call_time<-as.numeric(as.character(ce_sens_df$call_time))
@@ -705,9 +740,16 @@ ce_sens_df$call_time<-as.numeric(as.character(ce_sens_df$call_time))
 all_sens_df<-rbind(ce_sens_df, os_sens_df)
 
 sensor_info<-read.csv("sensor_info.csv")
+sensor_info$sensor_no<-gsub("\\..*","",sensor_info$deployment_id)
 
 
 all_sens_info<-merge(all_sens_df, sensor_info, by.x = "sensor_id", by.y = "sensor_no")
+
+#write.csv(all_sens_info, "all_bat_calls.csv", row.names = FALSE)
+
+#write.csv(all_sens_info, "all_bat_calls_2019_10_10.csv", row.names = FALSE)
+
+
 
 
 ```
@@ -844,11 +886,17 @@ all_sens_info<-all_sens_info %>%
   mutate(count_sp = n())%>%
   ungroup()
 
-# all_sens_info<-all_sens_info %>%
-#   mutate(c1 = replace(c1, c1 == "Nytalus leisleri", "Nyctalus leisleri"))%>%
-#   mutate(c1 = replace(c1, c1 == "Nytalus notula", "Nyctalus noctula"))%>%
-#   mutate(c1 = replace(c1, c1 == "Pleotus auritus", "Plecotus auritus"))%>%
-#   mutate(c1 = replace(c1, c1 == "Pleotus austriaus", "Plecotus austriacus"))
+all_sens_info<-all_sens_info %>%
+   mutate(c1 = replace(c1, c1 == "yctalus leisleri", "Nyctalus leisleri"))%>%
+   mutate(c1 = replace(c1, c1 == "yctalus noctula", "Nyctalus noctula"))%>%
+   mutate(c1 = replace(c1, c1 == "ipistrellus nathusii", "Pipistrellus nathusii"))%>%
+   mutate(c1 = replace(c1, c1 == "ipistrellus pipistrellus", "Pipistrellus pipistrellus")) %>% 
+   mutate(c1 = replace(c1, c1 == "ipistrellus pygmaeus", "Pipistrellus pygmaeus")) %>% 
+   mutate(c1 = replace(c1, c1 == "lecotus auritus", "Plecotus auritus")) %>% 
+   mutate(c1 = replace(c1, c1 == "lecotus austriacus", "Plecotus austriacus")) %>% 
+   mutate(c1 = replace(c1, c1 == "yotis brandtii", "Myotis brandtii")) %>% 
+   mutate(c1 = replace(c1, c1 == "yotis daubentonii", "Myotis daubentonii")) %>% 
+   mutate(c1 = replace(c1, c1 == "yotis nattereri", "Myotis nattereri"))
 ```
 
 ####Figure 6: Distribution of total daily calls for each month, by species.  
