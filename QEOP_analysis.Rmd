@@ -1,0 +1,737 @@
+---
+title: "QEOP Analysis"
+author: "Fiona Spooner"
+date: "August 8, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message = FALSE, warning = FALSE)
+```
+
+```{r}
+
+library(lubridate)
+library(sp)
+library(glmmTMB)
+library(bbmle)
+library(DHARMa)
+library(dplyr)
+library(lubridate)
+library(suncalc)
+library(ggplot2)
+
+```
+
+```{r,echo = FALSE, eval= FALSE}
+all_sens_info<-read.csv("all_bat_calls.csv")
+
+all_sens_info$timestamp<-as.POSIXct(all_sens_info$timestamp)
+
+all_sens_info$uni_hr<-round_date(all_sens_info$timestamp, unit = "hour")
+
+all_sens_info$deployment<-1
+```
+
+Changing the deployment of all sensor four records after 14th May 2018 to deploment 2
+Update all deployments here#
+
+```{r,echo = FALSE, eval= FALSE}
+all_sens_info[as.Date(as.character(all_sens_info$date)) > as.Date(as.character("2018-05-14")) & all_sens_info$sensor_id == 4,]<-all_sens_info %>%
+  filter(as.Date(as.character(date)) > as.Date("2018-05-14") & sensor_id == 4)%>%
+  mutate(deployment=replace(deployment, deployment==1, 2), Lat = replace(Lat, Lat==51.5367, 51.536553), Lon = replace(Lon, Lon==-0.0128, -0.013169))
+
+# all_sens_info %>%
+# filter(sensor_id == 4 & date >= as.Date("2018-05-14"))
+
+all_sens_info[as.Date(as.character(all_sens_info$date)) > as.Date("2018-08-07") & all_sens_info$sensor_id == 5,]<-all_sens_info %>%
+  filter(as.Date(as.character(date)) > as.Date("2018-08-07") & sensor_id == 5)%>%
+  mutate(deployment=replace(deployment, deployment==1, 2), Lat = replace(Lat, Lat==51.5362, 51.590616), Lon = replace(Lon, Lon==-0.0127, -0.0139243), Habitat = replace(Habitat, Habitat == "Grassland", "Duncan's Garden" ))
+
+
+all_sens_info$deployment_id<-paste(all_sens_info$sensor_id, all_sens_info$deployment, sep = ".")
+```
+
+
+
+###need to add in deployment_id
+
+```{r,echo = FALSE, eval= FALSE}
+hourly_data<-all_sens_info %>%
+  filter(deployment_id != "4.1" & deployment_id != "5.2")%>%
+  group_by(deployment_id, Habitat, uni_hr) %>%
+  mutate(hourly_count = n())%>%
+  arrange(-hourly_count)%>%
+  dplyr::select(date, Habitat, deployment_id, Lat, Lon, hourly_count, uni_hr)%>%
+  distinct()%>%
+  ungroup()
+```
+##adding in the hours where there were no bat calls
+
+
+```{r,echo = FALSE, eval= FALSE}
+all_hours<-seq(from = min(hourly_data$uni_hr), to = max(hourly_data$uni_hr), by = "hour")
+
+all_deps<-rep(unique(hourly_data$deployment_id), each = length(all_hours))
+
+habs<-unique(hourly_data[,c("deployment_id", "Habitat")])
+
+all_df<-data.frame(all_hours, all_deps,hourly_count = 0)
+all_df$all_deps<-as.character(all_df$all_deps)
+
+all_hours_df<-merge(all_df, hourly_data, by.x = c("all_deps","all_hours"), by.y = c("deployment_id", "uni_hr"), all=TRUE)
+all_hours_df<-unique(all_hours_df)
+
+
+all_hours_df<-merge(all_hours_df, habs, by.x = "all_deps", by.y = "deployment_id")
+
+all_hours_df$hourly_count.y[is.na(all_hours_df$hourly_count.y)]<-0
+
+df<-dplyr::select(all_hours_df, c(all_deps, all_hours, hourly_count.y, Habitat.y))
+colnames(df)<-c("deployment_id", "time_hour", "count", "Habitat")
+
+```
+
+
+```{r, echo = FALSE,eval= FALSE}
+break_finder<-function(x){
+  nl_out<-rep(x, each = x)
+}
+
+all_sensors_df<-NULL
+
+for (i in unique(df$deployment_id)){
+  
+  test<-df[df$deployment_id == i, ]
+  test<-arrange(test, time_hour)
+  rl<-rle(test$count == 0)  
+  bf_out<-sapply(rl$lengths, break_finder)
+  test_na_run<-unlist(bf_out)
+  #test_na_run[!is.na(test$count)]<-NA
+  test$hours_inactive<-test_na_run
+  all_sensors_df<-rbind(all_sensors_df,test)
+  #print(i)
+  
+}
+
+sensor_down<-which(all_sensors_df$hours_inactive >= 168)  ###finding runs where a sensor has been inactive for a week or longer
+
+
+all_sensors_df$active<-1
+
+all_sensors_df$active[sensor_down]<-0
+
+```
+
+###Removing sensors which were not assessed to have high levels of accuracy or were not assessed for this
+
+```{r, echo = FALSE,eval= FALSE}
+
+
+all_sensors_df$month<-month(all_sensors_df$time_hour)
+
+all_sens<-all_sensors_df %>%
+  filter(deployment_id != "1.1" & deployment_id != "6.1" & deployment_id != "11.1") %>% #high rates of false positives
+  filter(deployment_id != "3.1" & deployment_id != "4.2" & deployment_id != "5.1"& deployment_id != "15.1")   #no record of false positive/false negative rates
+
+```
+
+
+##Removing hours that were 2 hours before or 2 hrs after sunset
+
+```{r, echo = FALSE,eval= FALSE}
+library(suncalc)
+library(dplyr)
+
+suns<-getSunlightTimes(date = as.Date(all_sensors_df$time_hour),lat = 51.543523, lon = -0.016214 ,keep = c("sunrise","sunset"), tz = "UTC")
+
+suns<-unique(suns)
+
+all_sensors_df$date<-as.Date(all_sensors_df$time_hour)
+
+all_suns_df<-merge(all_sensors_df, suns, by = "date")
+
+all_suns_df$sunrise_lim<-all_suns_df$sunrise + (2*60*60)
+all_suns_df$sunset_lim<-all_suns_df$sunset - (2*60*60)
+
+
+suns_sub<-all_suns_df %>%
+  filter(time_hour < sunrise_lim | time_hour > sunset_lim & active ==1)
+
+#saveRDS(all_sensors_df, "hourly_bat_counts_sun_data.RDS")
+
+```
+
+#Climate data extraction
+
+```{r,echo = FALSE, eval= FALSE}
+sensor_info<-read.csv("sensor_info.csv")
+bats<-merge(suns_sub, sensor_info[,1:3], by= "deployment_id")
+
+events<-read.csv(here::here("Event_Data/attendances.csv"), stringsAsFactors = FALSE)
+events$date<-as.Date(events$Date, format = "%d-%m-%y")
+
+events<-events[-1,]
+
+climate<-readRDS("QEOP_hourly_climate_data.RDS")
+
+bats_events<-merge(bats, events, by= "date", all = TRUE)
+bats_events<-merge(bats_events, climate, by.x = c("date", "time_hour"), by.y = c("date","round_time"))
+
+bats_events$event_bin<- ifelse(is.na(bats_events$Event),"No","Yes")
+bats_events$event_bin_nd<- ifelse(is.na(bats_events$Event),"No","Yes")
+
+#bats_events$event_bin_nd<-c(0, bats_events$event_bin[-length(bats_events$event_bin)])
+
+bats_events$event_bin<-as.factor(bats_events$event_bin)
+bats_events$month<-as.factor(month(bats_events$date))
+
+roost<-data.frame(-0.0141001,51.541341) #location of roost near sensor 7
+colnames(roost)<-c("x","y")
+coordinates(roost)<- ~x+y
+
+lola<-unique(na.omit(bats_events[,c("Lon", "Lat")]))
+coordinates(lola)<- ~Lon+Lat
+
+dist_roost<-spDistsN1(lola, roost, longlat = TRUE)
+
+dist_df<-data.frame(lola, dist_roost)
+
+bats_events<-merge( bats_events,dist_df, by = c("Lon", "Lat"))
+
+bats_events$deployment_id<-as.factor(bats_events$deployment_id)
+#bats_events$inv_dist<-1/bats_events$dist_roost
+
+#bats_events<-bats_events[!is.na(bats_events$count),]
+#bats_events$uid<-paste(bats_events$time_hour, bats_events$deployment_id, sep = "_")
+
+bats_model<-dplyr::select(bats_events,c(count,time_hour,date,deployment_id, Habitat,hours_inactive,active,lat, lon,sunrise,sunset,event_bin,tempAvg,observations.humidityAvg,windspeedAvg,windgustAvg, precipTotal, dist_roost))%>%
+filter(active  == 1)
+
+bats_cc<-bats_model[complete.cases(bats_model),]
+
+#write.csv(bats_cc, "hourly_bats_complete_cases_for_models.csv", row.names = FALSE)
+#saveRDS(bats_cc, "hourly_bats_complete_cases_for_models_sun_subs.RDS")
+
+
+```
+
+
+Sliding window of climate data
+
+```{r,echo = FALSE, eval= FALSE}
+
+climate_lag<-function(time, lag){
+  
+    climate_sub<-climate%>%
+                  filter(round_time >  time & round_time <= time+(lag*60*60))%>%
+                  summarise(mean_temp_lag = mean(tempAvg, na.rm=TRUE), 
+                            mean_hum_lag = mean(observations.humidityAvg, na.rm=TRUE),
+                            mean_wind_sp_lag = mean(windspeedAvg, na.rm=TRUE), 
+                            mean_wind_g_lag = mean(windgustAvg, na.rm=TRUE), 
+                            total_precip_lag = sum(precipTotal, na.rm=TRUE))
+    
+    colnames(climate_sub)<-gsub("lag",lag,colnames(climate_sub))
+    
+    df_out<-data.frame(time, climate_sub)  
+    print(df_out)
+    return(df_out)
+
+}
+
+clim_24_out<-lapply(X = unique(bats_model$time_hour), FUN = climate_lag, lag = 24)
+clim_24_out<-do.call("rbind", clim_24_out)
+
+clim_36_out<-lapply(X = unique(bats_model$time_hour), FUN = climate_lag, lag = 36)
+clim_36_out<-do.call("rbind", clim_36_out)
+
+clim_48_out<-lapply(X = unique(bats_model$time_hour), FUN = climate_lag, lag = 48)
+clim_48_out<-do.call("rbind", clim_48_out)
+
+climm<-merge(clim_24_out, clim_36_out, by = "time")
+climm<-merge(climm, clim_48_out, by = "time")
+
+bats_all<-merge(bats_cc, climm , by.x  = "time_hour", by.y = "time")
+
+#saveRDS(bats_all, "hourly_bats_complete_cases_for_models_sun_subs_lag_clim.RDS")
+
+
+```
+
+Filter out the sensors which we cannot use
+
+```{r,echo = FALSE,}
+
+bats_all<-readRDS("hourly_bats_complete_cases_for_models_sun_subs_lag_clim.RDS")
+
+bats_all<-bats_all %>%
+  filter(deployment_id != "1.1" & deployment_id != "6.1" & deployment_id != "11.1") %>% #high rates of false positives
+  filter(deployment_id != "3.1" & deployment_id != "4.2" & deployment_id != "5.1"& deployment_id != "15.1")   #no record of false positive/false negative rates
+
+
+#write.csv(bats_all, "bats_hourly_data.csv", row.names = FALSE)
+
+```
+Plot data
+
+```{r,eval = FALSE}
+
+bats_all$month<-month(bats_all$time_hour)
+bats_all$hour<-hour(bats_all$time_hour)
+
+bats_all<-bats_all[complete.cases(bats_all),]
+
+sum_month<-bats_all%>%
+  group_by(month, deployment_id)%>%
+  summarise(sum_month = sum(count))
+
+bats_all<-bats_all%>%
+  arrange(dist_roost)
+
+ggplot(bats_all, aes(log1p(count)))+
+  geom_histogram()+
+  facet_wrap(~deployment_id)
+#  
+# ggplot(bats_all, aes(x = time_hour, y = deployment_id))+
+#   geom_line(size = log1p(bats_all$count))
+
+ggplot(bats_all, aes(log1p(count)))+
+  geom_histogram()+
+  facet_wrap(~month)
+
+
+sum_zero<-bats_all%>%
+  group_by(month, deployment_id,dist_roost)%>%
+  filter(count == 0)%>%
+  summarise(sum_zero = n())
+
+ggplot(sum_zero, aes(x = dist_roost, y = sum_zero))+
+  geom_point()
+
+
+
+
+check<-bats_all%>%
+  filter(deployment_id == "2.1")%>%
+  arrange(time_hour)
+
+
+```
+
+Models!
+
+```{r, eval = FALSE}
+
+dir.create(here::here("hourly_models_new"))
+
+bats_all$month<-as.factor(bats_all$month)
+
+
+fit_zipoisson <- glmmTMB(count~ event_bin+ tempAvg+
+                        windgustAvg + 
+                        precipTotal + mean_temp_24+mean_wind_sp_24+
+                        mean_wind_g_24+total_precip_24+
+                        (1|deployment_id),   
+                        data=bats_all,
+                        ziformula=~1,
+                        family=poisson)
+
+#saveRDS(fit_zipoisson, here::here("hourly_models_new/zi_poisson_24.RDA"))
+
+
+
+fit_zinbinom1 <- glmmTMB(count~ event_bin+ tempAvg+
+                        windgustAvg + 
+                        precipTotal+mean_temp_24+mean_wind_sp_24+
+                        mean_wind_g_24+total_precip_24+(1|deployment_id),   
+                        data=bats_all,
+                        ziformula=~1,
+                        family=nbinom1)
+
+#saveRDS(fit_zinbinom1, here::here("hourly_models_new/zin_binom1_24.RDA"))
+
+
+fit_zinbinom2 <- glmmTMB(count~ event_bin+ tempAvg+
+                        windgustAvg + 
+                        precipTotal + mean_temp_24+mean_wind_sp_24+
+                        mean_wind_g_24+total_precip_24+(1|deployment_id),   
+                        data=bats_all,
+                        ziformula=~1,
+                        family=nbinom2)
+
+#saveRDS(fit_zinbinom2, here::here("hourly_models_new/zin_binom2_24.RDA"))
+
+
+fit_hnbinom1 <- glmmTMB(count~ event_bin+ tempAvg+
+                        windgustAvg + 
+                        precipTotal + mean_temp_24+mean_wind_sp_24+
+                        mean_wind_g_24+total_precip_24+(1|deployment_id), 
+                        data=bats_all,
+                        ziformula=~1,
+                        family=truncated_nbinom1)
+
+#saveRDS(fit_hnbinom1, here::here("hourly_models_new/zin_hnbinom1_24.RDA"))
+
+
+##Doesn't converge
+
+fit_hnbinom2 <- glmmTMB(count~  event_bin+ tempAvg+
+                        windgustAvg + 
+                        precipTotal + mean_temp_24+mean_wind_sp_24+
+                        mean_wind_g_24+total_precip_24+(1|deployment_id), 
+                        data=bats_all,
+                        ziformula=~1,
+                        family=truncated_nbinom2)
+
+#saveRDS(fit_hnbinom2, here::here("hourly_models_new/zin_hnbinom2_24.RDA"))
+
+
+fit_zipoisson_dist <- glmmTMB(count~ event_bin+ tempAvg+
+                              windgustAvg + precipTotal + 
+                              mean_temp_24+mean_wind_sp_24+
+                              mean_wind_g_24+total_precip_24+(1|deployment_id),   
+                              data=bats_all,
+                              ziformula=~dist_roost,
+                              family=poisson)
+
+#saveRDS(fit_zipoisson_dist, here::here("hourly_models_new/zin_poisson_dist_24.RDA"))
+
+fit_zinbinom1_dist <- glmmTMB(count~ event_bin+ tempAvg+
+                              windgustAvg + precipTotal + mean_temp_24+
+                              mean_wind_sp_24 + mean_wind_g_24+
+                              total_precip_24+(1|deployment_id),   
+                              data=bats_all,
+                              ziformula=~dist_roost,
+                              family=nbinom1)
+
+#saveRDS(fit_zinbinom1_dist, here::here("hourly_models_new/zin_binom1_dist_24.RDA"))
+fit_zinbinom1_dist<-readRDS(here::here("hourly_models_new/zin_binom1_dist_24.RDA"))
+
+
+fit_zinbinom1_mon<- glmmTMB(count~ event_bin+ tempAvg+
+                              windgustAvg + precipTotal + mean_temp_24+
+                              mean_wind_sp_24 + mean_wind_g_24+
+                              total_precip_24+(1|deployment_id),   
+                              data=bats_all,
+                              ziformula=~month,
+                              family=nbinom1)
+
+saveRDS(fit_zinbinom1_mon, here::here("hourly_models_new/zin_binom1_mon_24.RDA"))
+
+
+fit_zinbinom2_dist <- glmmTMB(count~ event_bin+ tempAvg+
+                              windgustAvg + precipTotal + mean_temp_24+
+                              mean_wind_sp_24 + mean_wind_g_24+total_precip_24+
+                              (1|deployment_id), data=bats_all,
+                              ziformula=~dist_roost,
+                              family=nbinom2)
+
+saveRDS(fit_zinbinom2_dist, here::here("hourly_models_new/zin_binom2_dist_24.RDA"))
+
+
+
+fit_hnbinom1_dist <- glmmTMB(count~ event_bin+ tempAvg+
+                             windgustAvg + 
+                             precipTotal + mean_temp_24+mean_wind_sp_24+
+                             mean_wind_g_24+total_precip_24+(1|deployment_id), 
+                             data=bats_all,
+                             ziformula=~dist_roost,
+                             family=truncated_nbinom1)
+
+saveRDS(fit_hnbinom1_dist, here::here("hourly_models_new/zin_hnbinom1_dist_24.RDA"))
+
+
+###Doesn't converge
+
+fit_hnbinom2_dist <- glmmTMB(count~ event_bin+ tempAvg+
+                        windgustAvg + 
+                        precipTotal + mean_temp_24+mean_wind_sp_24+
+                        mean_wind_g_24+total_precip_24+(1|deployment_id), 
+                        data=bats_all,
+                        ziformula=~dist_roost,
+                        family=truncated_nbinom2)
+
+saveRDS(fit_hnbinom2_dist, here::here("hourly_models_new/zin_binom2_dist_24.RDA"))
+
+
+
+fit_zinbinom1_dist_int_mo <- glmmTMB(count~ event_bin+ tempAvg+
+                                    windgustAvg + precipTotal + mean_temp_24 + 
+                                    mean_wind_sp_24 +mean_wind_g_24+total_precip_24+
+                                    (1|deployment_id), data=bats_all,
+                                    ziformula=~dist_roost+month,
+                                    family=nbinom1)
+
+saveRDS(fit_zinbinom1_dist_int_mo, here::here("hourly_models_new/zin_binom1_dist_int_mo_24.RDA"))
+
+
+
+bats_all$ID<-1:nrow(bats_all)
+
+fit_olre <- glmmTMB(count~ event_bin+ tempAvg+
+                    windgustAvg + 
+                    precipTotal+ mean_temp_24+mean_wind_sp_24+
+                    mean_wind_g_24+total_precip_24+(1|deployment_id)+
+                    (1|ID), data=bats_all,
+                    family=poisson)
+
+fit_olre_no <- glmmTMB(count~ event_bin+ tempAvg+
+                    windgustAvg + 
+                    precipTotal+ mean_temp_24+mean_wind_sp_24+
+                    mean_wind_g_24+total_precip_24+
+                    (1|deployment_id), data=bats_all,
+                    family=poisson)
+
+#doesn't converge
+saveRDS(fit_olre, here::here("hourly_models_new/zin_olre_24.RDA"))
+
+```
+
+```{r}
+
+bats_all$ID<-1:nrow(bats_all)
+fit_zipoisson<-readRDS(here::here("hourly_models_new/zi_poisson_24.RDA"))
+fit_zinbinom1<-readRDS(here::here("hourly_models_new/zin_binom1_24.RDA"))
+fit_zinbinom2<-readRDS(here::here("hourly_models_new/zin_binom2_24.RDA"))
+#fit_hnbinom1<-readRDS(here::here("hourly_models_new/zin_hnbinom1_24.RDA"))
+fit_hnbinom2<-readRDS(here::here("hourly_models_new/zin_hnbinom2_24.RDA"))
+fit_zipoisson_dist<-readRDS(here::here("hourly_models_new/zin_poisson_dist_24.RDA"))
+fit_zinbinom1_mon<-readRDS(here::here("hourly_models_new/zin_binom1_mon_24.RDA"))
+fit_zinbinom2_dist<-readRDS(here::here("hourly_models_new/zin_binom2_dist_24.RDA"))
+fit_zinbinom1_dist_int_mo<-readRDS(here::here("hourly_models_new/zin_binom1_dist_int_mo_24.RDA"))
+fit_olre<-readRDS(here::here("hourly_models_new/zin_olre_24.RDA"))
+
+
+AICtab(fit_zipoisson,fit_zinbinom1,fit_zinbinom2,fit_hnbinom2,fit_zipoisson_dist, fit_zinbinom1_mon,fit_zinbinom2_dist,fit_zinbinom1_dist_int_mo, fit_olre)
+
+
+fit_olre2<-update(fit_olre, . ~ . -precipTotal)
+fit_olre3<-update(fit_olre2, . ~ . -total_precip_24)
+
+```
+
+```{r,eval = FALSE}
+source("StepbyStepGuide.R")
+
+
+#################################
+# Quantifying Point Estimate of Overdispersion
+#################################
+
+#Function to calculate a point estimate of overdispersion from a mixed model object
+od.point<-function(modelobject){
+	x<-sum(resid(modelobject,type="pearson")^2)
+	rdf<-summary(modelobject)$AICtab[5]
+	return(x/rdf)
+}
+
+od.point(fit_olre_no)
+	
+#################################
+# Quantifying Overdispersion Through Parametric Bootstrap
+#################################
+
+#Function to pass to parametric bootstrap function 'bootMer' that calculates the sum of squared Pearson residuals (required for 'od' function)
+FUN <- function(fit) {
+    #return(fixef(fit))
+    x<-resid(fit,type="pearson")
+    return(sum(x^2))
+}	
+
+#Function To Calculate Ratio of Model SS to Mean Parametric Bootstrap SS ('bias')
+od<-function(bootobject){
+	biasvals<-bootobject $t0/bootobject[2]$t
+	bias<-mean(biasvals,na.rm=T)
+	intervals<-quantile(biasvals,c(0.025,0.975),na.rm=T)
+	dat<-c(bias,intervals)
+	return(dat)
+}
+
+
+#Parametric bootstrap of the model - requires 'FUN' from above
+library(boot) #require d to inspect results
+
+m1boot<-bootMer(fit_olre_no,FUN,100)
+m1boot
+
+#Calculate Dispersion Parameter - uses "OD" function above
+od(m1boot)
+
+
+```
+
+```{r}
+
+summary(fit_zinbinom2)
+ranef(fit_zinbinom2)
+
+
+fit_zinbinom2b<-update(fit_zinbinom2, . ~ . -precipTotal)
+summary(fit_zinbinom2b)
+
+fit_zinbinom2c<-update(fit_zinbinom2b, . ~ . - mean_temp_24 - mean_wind_sp_24 - mean_wind_g_24  -total_precip_24)
+
+
+summary(fit_zinbinom2c)
+ranef(fit_zinbinom2c)
+```
+48 hours
+
+```{r, eval = FALSE, echo = FALSE}
+
+
+fit_zipoisson <- glmmTMB(count~ event_bin+ tempAvg+
+                        windgustAvg + 
+                        precipTotal + mean_temp_48+mean_wind_sp_48+
+                        mean_wind_g_48+total_precip_48+
+                        (1|deployment_id),   
+                        data=bats_all,
+                        ziformula=~1,
+                        family=poisson)
+
+saveRDS(fit_zipoisson, here::here("hourly_models_new/zi_poisson_48.RDA"))
+
+
+fit_zinbinom1 <- glmmTMB(count~ event_bin+ tempAvg+
+                        windgustAvg + 
+                        precipTotal+mean_temp_48+mean_wind_sp_48+
+                        mean_wind_g_48+total_precip_48+(1|deployment_id),   
+                        data=bats_all,
+                        ziformula=~1,
+                        family=nbinom1)
+
+saveRDS(fit_zinbinom1, here::here("hourly_models_new/zin_binom1_48.RDA"))
+
+
+fit_zinbinom2 <- glmmTMB(count~ event_bin+ tempAvg+
+                        windgustAvg + 
+                        precipTotal + mean_temp_48+mean_wind_sp_48+
+                        mean_wind_g_48+total_precip_48+(1|deployment_id),   
+                        data=bats_all,
+                        ziformula=~1,
+                        family=nbinom2)
+
+saveRDS(fit_zinbinom2, here::here("hourly_models_new/zin_binom2_48.RDA"))
+
+fit_hnbinom1 <- glmmTMB(count~ event_bin+ tempAvg+
+                        windgustAvg + 
+                        precipTotal + mean_temp_48+mean_wind_sp_48+
+                        mean_wind_g_48+total_precip_48+(1|deployment_id), 
+                        data=bats_all,
+                        ziformula=~1,
+                        family=truncated_nbinom1)
+
+saveRDS(fit_hnbinom1, here::here("hourly_models_new/zin_hnbinom1_48.RDA"))
+
+##Doesn't converge
+
+fit_hnbinom2 <- glmmTMB(count~  event_bin+ tempAvg+
+                        windgustAvg + 
+                        precipTotal + mean_temp_48+mean_wind_sp_48+
+                        mean_wind_g_48+total_precip_48+(1|deployment_id), 
+                        data=bats_all,
+                        ziformula=~1,
+                        family=truncated_nbinom2)
+
+saveRDS(fit_hnbinom2, here::here("hourly_models_new/zin_hnbinom2_48.RDA"))
+
+fit_zipoisson_dist <- glmmTMB(count~ event_bin+ tempAvg+
+                              windgustAvg + precipTotal + 
+                              mean_temp_48+mean_wind_sp_48+
+                              mean_wind_g_48+total_precip_48+(1|deployment_id),   
+                              data=bats_all,
+                              ziformula=~dist_roost,
+                              family=poisson)
+
+saveRDS(fit_zipoisson_dist, here::here("hourly_models_new/zin_poisson_dist_48.RDA"))
+
+fit_zinbinom1_dist <- glmmTMB(count~ event_bin+ tempAvg+
+                              windgustAvg + precipTotal + mean_temp_48+
+                              mean_wind_sp_48 + mean_wind_g_48+
+                              total_precip_48+(1|deployment_id),   
+                              data=bats_all,
+                              ziformula=~dist_roost,
+                              family=nbinom1)
+
+saveRDS(fit_zinbinom1_dist, here::here("hourly_models_new/zin_binom1_dist_48.RDA"))
+
+
+fit_zinbinom1_mon<- glmmTMB(count~ event_bin+ tempAvg+
+                              windgustAvg + precipTotal + mean_temp_48+
+                              mean_wind_sp_48 + mean_wind_g_48+
+                              total_precip_48+(1|deployment_id),   
+                              data=bats_all,
+                              ziformula=~month,
+                              family=nbinom1)
+
+saveRDS(fit_zinbinom1_mon, here::here("hourly_models_new/zin_binom1_dist_48.RDA"))
+
+
+
+fit_zinbinom2_dist <- glmmTMB(count~ event_bin+ tempAvg+
+                              windgustAvg + precipTotal + mean_temp_48+
+                              mean_wind_sp_48 + mean_wind_g_48+total_precip_48+
+                              (1|deployment_id), data=bats_all,
+                              ziformula=~dist_roost,
+                              family=nbinom2)
+
+saveRDS(fit_zinbinom2_dist, here::here("hourly_models_new/zin_binom2_dist_48.RDA"))
+
+fit_hnbinom1_dist <- glmmTMB(count~ event_bin+ tempAvg+
+                             windgustAvg + 
+                             precipTotal + mean_temp_48+mean_wind_sp_48+
+                             mean_wind_g_48+total_precip_48+(1|deployment_id), 
+                             data=bats_all,
+                             ziformula=~dist_roost,
+                             family=truncated_nbinom1)
+
+saveRDS(fit_hnbinom1_dist, here::here("hourly_models_new/zin_hnbinom1_dist_48.RDA"))
+
+###Doesn't converge
+
+fit_hnbinom2_dist <- glmmTMB(count~ event_bin+ tempAvg+
+                        windgustAvg + 
+                        precipTotal + mean_temp_48+mean_wind_sp_48+
+                        mean_wind_g_48+total_precip_48+(1|deployment_id), 
+                        data=bats_all,
+                        ziformula=~dist_roost,
+                        family=truncated_nbinom2)
+
+saveRDS(fit_hnbinom2_dist, here::here("hourly_models_new/zin_binom2_dist_48.RDA"))
+
+
+fit_zinbinom1_dist_int_mo <- glmmTMB(count~ event_bin+ tempAvg+
+                                    windgustAvg + precipTotal + mean_temp_48 + 
+                                    mean_wind_sp_48 +mean_wind_g_48+total_precip_48+
+                                    (1|deployment_id), data=bats_all,
+                                    ziformula=~dist_roost+month,
+                                    family=nbinom1)
+
+saveRDS(fit_zinbinom1_dist_int_mo, here::here("hourly_models_new/zin_binom1_dist_int_mo_48.RDA"))
+
+
+
+bats_all$ID<-1:nrow(bats_all)
+
+
+fit_olre <- glmmTMB(count~ event_bin+ tempAvg+
+                    windgustAvg + 
+                    precipTotal+ mean_temp_48+mean_wind_sp_48+
+                    mean_wind_g_48+total_precip_48+(1|deployment_id)+
+                    (1|ID), data=bats_all,
+                    family=poisson)
+
+#doesn't converge
+saveRDS(fit_olre, here::here("hourly_models_new/zin_olre_48.RDA"))
+
+
+
+AICtab(fit_zipoisson,fit_zinbinom1,fit_zinbinom2,fit_hnbinom1,fit_hnbinom2, fit_zipoisson_dist,fit_zinbinom1_dist, fit_zinbinom1_mon,
+       fit_zinbinom2_dist,fit_hnbinom1_dist ,fit_hnbinom2_dist,fit_zinbinom1_dist_int_mo, fit_olre)
+
+
+
+AICtab(fit_zipoisson,fit_zinbinom1,fit_zinbinom2,fit_hnbinom2, fit_zipoisson_dist,fit_zinbinom1_dist, fit_zinbinom1_mon,
+       fit_zinbinom2_dist,fit_hnbinom2_dist,fit_zinbinom1_dist_int_mo, fit_olre)
+
+```
