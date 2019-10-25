@@ -1,0 +1,571 @@
+---
+
+title: "All Calls"
+author: "Fiona Spooner"
+date: "25 October 2019"
+output: html_document
+---
+```{r}
+library(chron)
+library(scales)
+library(lubridate)
+library(ggplot2)
+library(vroom)
+
+```
+
+
+```{r, eval=FALSE}
+
+#dump<-read.table("qeop_dump_all.csv", fill=T, sep=",")
+
+dump_test<-read.table("qeop_dump_2019_02_23.csv", fill=T, sep=",")
+
+
+dump<-read.table("all_bat_2019_09_02a.csv", fill=T, sep=",",skip = 4)
+dumpb<-read.table("all_bat_2019_09_02b.csv", fill=T, sep=",", skip = 1)
+
+dump_all<-rbind(dump, dumpb)
+
+
+##adding in a column to identify each row with a sensor
+
+dump_all$sensor<-NA
+for (i in 1:15){
+  start_id<-min(which(grepl( paste("qeop_batstore_",i, sep=""),dump_all[,1])))
+  end_id<-max(which(grepl( paste("qeop_batstore_",i, sep=""),dump_all[,1])))
+  dump_all[start_id:end_id,]$sensor<-paste("Sensor_",i,sep="")
+  print(i)
+}
+
+table(dump_all$sensor)
+
+dump_all$sensor[1:776]<-1
+
+dump_all$sensor[1638302:1639016]<-7
+
+dump<-dump_all[!is.na(dump_all$sensor),]
+
+dump<-dump[,c(1,2,4,5,6,13,ncol(dump))]
+dump<-dump[grepl("\t",dump[,1]),]
+dump[,1]<-as.numeric(gsub("[\t(]","",dump[,1]))
+dump[,3]<-as.numeric(gsub("[^0-9.]", "",  dump[,3]))
+dump[,4]<-as.numeric(gsub("[^0-9.]", "",  dump[,4]))
+dump[,5]<-gsub("[[:punct:]]", "", dump[,5])
+dump[,5]<-substring(dump[,5],2)
+dump[,6]<-as.numeric(gsub("[^0-9.]", "",  dump[,6]))
+
+dump$sensor_no<-as.numeric(gsub("[^0-9.]", "",  dump$sensor))
+
+colnames(dump)<-c("ID", "datetime", "prob_bat","prob_sp","species_class","call_time","sensor", "sensor_no")
+
+dump$datetime<-as.POSIXct(dump$datetime,format="%Y-%m-%d %H:%M:%S")
+
+dump$date<- as.Date(dump$datetime)
+
+dump$species_class<-substring(dump$species_class, 2)
+
+dump$time<- format(dump$datetime, "%H:%M:%S")
+
+
+#write.csv(dump, "all_ce_tools_dump_2019_09_02a.csv", row.names = FALSE)
+
+```
+
+
+
+```{r, eval= FALSE , echo = FALSE}
+
+library(stringr)
+
+os_dirs<-list.dirs(here::here("data_archive/opensensors_Daniyar/qeoplogs_more/"))
+
+getmode<-function(v){
+  uniqv<-unique(v)
+  uniqv[which.max(tabulate(match(v, uniqv)))]
+}
+
+#getting rid of the folders with multiple dates in - removing anything which doesn't have the modal average number of characters. Bit shaky but okay for now.
+os_dirs<-os_dirs[nchar(os_dirs)==getmode(nchar(os_dirs))]
+
+
+os_tool_out<-function(os_dir){
+  file_list<-list.files(os_dir)
+  
+  for (file in file_list){
+      print(os_dir)
+      print(file)
+    
+      if(grepl(".csv", file)){
+         df_temp = read.table(paste(os_dir,"/", file, sep=""), sep=",", header = T, stringsAsFactors = F)
+         df_temp$sensor_id<-as.numeric(gsub("\\D", "", file))
+         df_temp$timestamp<-as.numeric(as.character(df_temp$timestamp))
+         df_temp$timestamp<-anytime(df_temp$timestamp/1000)
+         
+         df_out<-df_temp[,c("sensor_id","timestamp", "call_time", "prob_bat", "c1", "p1")]
+         
+      } 
+    
+      if (grepl(".txt", file)) {
+         #df_temp = read.table(paste(ce_dir,"/", file, sep=""))
+         df_temp = read.csv(paste(os_dir,"/", file, sep=""), header = FALSE)
+         cols<-paste("V", 1:ncol(df_temp), sep="")
+         df_temp$x <- apply( df_temp[ , cols ] , 1 , paste , collapse = "." )
+         
+         spl<-strsplit(df_temp$x, " ")
+         
+         get_neat_os_data<-function(x){
+           
+             sensor_id<-gsub("[^0-9]", "", x[which(grepl("sensor_bat",x))])
+             
+             timestamp<-gsub("[^0-9.]", "",paste(x[which(x== "timestamp:")+1],x[which(x== "timestamp:")+2],x[which(x== "timestamp:")+3],x[which(x== "timestamp:")+4], x[which(x== "timestamp:")+5], x[which(x== "timestamp:")+6], sep=""))
+             
+             timestamp<-toString(strsplit(timestamp, "[.]")[[1]][2:7])
+             
+             timestamp<-as.POSIXct(timestamp, format = "%Y, %m, %d, %H, %M, %S")  
+             call_time<-x[which(x == "call_time:")+1]
+             call_time<-as.numeric(substr(call_time, 1, nchar(call_time)-1)) 
+             
+             prob_bat<- x[which(x == "prob_bat:")+1]
+             prob_bat<-as.numeric(substr(prob_bat, 1, nchar(prob_bat)-1))  
+              
+             genus<-gsub("'","",x[which(x == "c1:")+1])
+             spec<-gsub("[[:punct:]]","",x[which(x == "c1:")+2])
+             
+             c1<-paste(genus, spec, sep = " ")
+             
+             p1<- x[which(x == "p1:")+1]
+             p1<-as.numeric(substr(p1, 1, nchar(p1)-1)) 
+             
+             df_out<-data.frame(sensor_id,timestamp, call_time, prob_bat, c1, p1)
+             colnames(df_out)<-c("sensor_id","timestamp", "call_time", "prob_bat", "c1", "p1")
+             print(df_out)
+         return(df_out)
+         }
+         
+         df_out<-lapply(spl,get_neat_os_data)
+         df_out<-do.call("rbind", df_out)
+         
+           }
+         #print(os_dir)
+         #print(file)
+         df = rbind(df, df_out)
+         #print(paste(os_dir, file, sep="/"))
+        
+          }
+  
+  return(df)
+}
+
+df<-data.frame()
+
+os_df<-lapply(os_dirs, os_tool_out)
+
+
+
+colnames <- c("sensor_id","timestamp", "call_time", "prob_bat", "c1", "p1") 
+
+
+# for (i in seq_along(os_df)){
+#   
+#   if(length(colnames(os_df[[i]])) > 0){
+#   colnames(os_df[[i]]) <- colnames
+#   } else{
+#     os_df[[i]]<-NULL
+#   }
+#   print(i)
+#   }
+
+
+os_sens_df<-do.call("rbind", os_df)
+
+os_sens_df$c1<-gsub('[[:punct:] ]+',' ',os_sens_df$c1)
+
+os_sens_df$c1<-str_trim(os_sens_df$c1)
+
+
+os_sens_df$date<-as.Date(os_sens_df$timestamp)
+
+os_sens_df$time<-format(os_sens_df$timestamp, "%H:%M:%S")
+
+
+
+
+#write.csv(os_sens_df, "all_sensors_os_records_May_2019.csv", row.names = FALSE)
+
+```
+
+
+```{r, eval=FALSE, echo = FALSE}
+
+os_sens_df<-vroom::vroom("all_sensors_os_records_May_2019.csv")
+ce_sensors<-vroom::vroom("all_ce_tools_dump_2019_09_02a.csv")
+
+ce_sensors<-ce_sensors %>% 
+              dplyr::select(sensor_no, datetime, call_time,prob_bat, species_class, prob_sp,date, time)
+
+colnames(ce_sensors)<-colnames(os_sens_df)
+#ce_sensors$sensor_id<- gsub("[^0-9.]", "", ce_sensors$sensor_id)
+
+all_calls_df<-rbind(ce_sensors, os_sens_df)
+
+#write.csv(all_calls_df, "all_sensors_records_2019_10_25.csv", row.names = FALSE)
+
+```
+
+
+Adding a month column and formatting data for plotting record data over the year
+```{r}
+#ce_sens_df<-read.csv("all_sensors_ce_records.csv")
+#ce_sens_df<-read.csv("all_sensors_ce_records_2019_10_10.csv")
+#os_sens_df<-read.csv("all_sensors_os_records_May_2019.csv")
+#ce_sens_df$call_time<-as.numeric(as.character(ce_sens_df$call_time))
+
+
+all_sens_df<-vroom::vroom("all_sensors_records_2019_10_25.csv")
+
+
+
+all_sens_df<-rbind(ce_sens_df, os_sens_df)
+
+sensor_info<-read.csv("sensor_info.csv")
+sensor_info$sensor_no<-gsub("\\..*","",sensor_info$deployment_id)
+
+
+all_sens_info<-merge(all_sens_df, sensor_info, by.x = "sensor_id", by.y = "sensor_no")
+
+#write.csv(all_sens_info, "all_bat_calls.csv", row.names = FALSE)
+
+#write.csv(all_sens_info, "all_bat_calls_2019_10_10.csv", row.names = FALSE)
+
+
+
+
+```
+
+
+Adding deployment information column
+
+```{r, echo = FALSE}
+
+
+# all_sensors_merge<-all_sensors_merge %>%
+#  # filter(sensor_no == 4 & date >= as.Date("2018-05-14"))
+#   mutate(sensor_no=replace(sensor_no, sensor_no == 4 & date >= as.Date("2018-05-14"), 4.5))
+
+all_sens_info$deployment<-1
+
+
+#changing the deployment of all sensor four records after 14th May 2018 to deploment 2
+#Update all deployments here
+#When did 5 move to Duncan's garden??
+#6 might've moved?
+#8 has or is due to be removed due to building work - is likely to be in the bin.
+
+all_sens_info[as.Date(as.character(all_sens_info$date)) > as.Date(as.character("2018-05-14")) & all_sens_info$sensor_id == 4,]<-all_sens_info %>%
+  filter(as.Date(as.character(date)) > as.Date("2018-05-14") & sensor_id == 4)%>%
+  mutate(deployment=replace(deployment, deployment==1, 2), Lat = replace(Lat, Lat==51.5367, 51.536553), Lon = replace(Lon, Lon==-0.0128, -0.013169))
+
+# all_sens_info %>%
+# filter(sensor_id == 4 & date >= as.Date("2018-05-14"))
+
+all_sens_info[as.Date(as.character(all_sens_info$date)) > as.Date("2018-08-07") & all_sens_info$sensor_id == 5,]<-all_sens_info %>%
+  filter(as.Date(as.character(date)) > as.Date("2018-08-07") & sensor_id == 5)%>%
+  mutate(deployment=replace(deployment, deployment==1, 2), Lat = replace(Lat, Lat==51.5362, 51.590616), Lon = replace(Lon, Lon==-0.0127, -0.0139243), Habitat = replace(Habitat, Habitat == "Grassland", "Duncan's Garden" ))
+
+
+all_sens_info$deployment_id<-paste(all_sens_info$sensor_id, all_sens_info$deployment, sep = ".")
+
+```
+
+```{r, echo = FALSE}
+all_sens_info$month<-months.Date(as.Date(all_sens_info$date))
+
+all_sens_info$month<-factor(all_sens_info$month, levels = month.name)
+
+all_sens_info$timestamp<-as.POSIXct(all_sens_info$timestamp)
+
+t <- strftime(all_sens_info$timestamp, format="%H:%M:%S")
+
+all_sens_info$time<-as.POSIXct(t, format="%H:%M:%S")
+
+all_sens_info<-all_sens_info[complete.cases(all_sens_info),]
+
+
+all_sens_info$Habitat<-as.character(all_sens_info$Habitat)
+
+#shifting anything before 6pm forwrd by a day
+#all_sens_info[hour(all_sens_info$timestamp) < 18, ]$time<-all_sens_info[hour(all_sens_info$timestamp) < 18, ]$time +days(1)
+
+```
+
+```{r, eval = FALSE}
+all_sens_info_night<-all_sens_info[all_sens_info$time < as.POSIXct(paste(Sys.Date()+1, " 06:00:00 GMT", sep="")),]
+
+all_sens_info_night <-all_sens_info_night %>%
+  group_by(sensor_id, month) %>%
+  mutate(count = n())%>%
+  ungroup
+
+give.n <- function(x){
+   #return(c(y = as.POSIXct(paste(Sys.Date(), "18:00:00", sep=" "), format = "%Y-%m-%d %H:%M:%S"), label = length(x)))
+  return(c(y = min(x), label = length(x)))
+}
+
+ggplot(all_sens_info_night, aes(x = month, y = time))+
+  geom_boxplot(aes(fill=Habitat))+
+  facet_wrap(.~as.numeric(deployment_id))+
+  labs(x = "Month", y = "Time")+
+  #stat_summary(fun.data = give.n, geom = "text")+
+  scale_x_discrete(labels=month.abb[c(1,4,7,10)], breaks = c("January", "April", "July", "October")) +
+  theme_bw()
+
+```
+
+
+
+```{r}
+
+# all_sensors_df$month<-months.Date(as.Date(all_sensors_df$date))
+# all_sensors_df$month<-factor(all_sensors_df$month, levels = month.name)
+
+all_sens_info$date_ch<-as.character(all_sens_info$date)
+all_sens_info$c1<-as.character(all_sens_info$c1)
+all_sens_info$month_ch<-all_sens_info$month
+```
+
+```{r}
+all_sens_info<-all_sens_info %>%
+  group_by(date_ch)%>%
+  mutate(count_date = n())%>%
+  ungroup()
+
+#write.csv(all_sens_info, "all_sensors_all_calls.csv", row.names = FALSE)
+
+```
+
+####Figure 5: Distribution of total daily calls for each month 
+
+```{r}
+year_plot<-ggplot(all_sens_info, aes(x = all_sens_info$month, y = all_sens_info$count_date))+
+  geom_boxplot()+
+  scale_y_continuous(trans = log10_trans(), breaks = trans_breaks("log10", function(x) 10^x), labels = trans_format("log10", math_format(10^.x)))+
+  labs(x = "Month", y = "Daily Detected Calls")+
+  scale_x_discrete(labels=month.abb) +
+  theme_bw()+
+  theme(axis.text.y = element_text(lineheight = 0.5 , size = 18),
+        axis.text.x = element_text(size = 18, angle= 45, hjust = 1),
+        axis.title.x = element_text(size = 20),
+        axis.title.y = element_text(size = 20))
+
+
+png("Annual_Calls_wide.png", width = 10, height = 8, units = 'in', res = 300)
+year_plot# Make plot
+dev.off()
+
+
+```
+
+
+Distribution of daily calls over the year by species - some of the species names are spelt multiple ways, some wrong, some right.
+
+```{r}
+all_sens_info<-all_sens_info %>%
+  group_by(sensor_id,c1, date)%>%
+  mutate(count_sp = n())%>%
+  ungroup()
+
+all_sens_info<-all_sens_info %>%
+   mutate(c1 = replace(c1, c1 == "yctalus leisleri", "Nyctalus leisleri"))%>%
+   mutate(c1 = replace(c1, c1 == "yctalus noctula", "Nyctalus noctula"))%>%
+   mutate(c1 = replace(c1, c1 == "ipistrellus nathusii", "Pipistrellus nathusii"))%>%
+   mutate(c1 = replace(c1, c1 == "ipistrellus pipistrellus", "Pipistrellus pipistrellus")) %>% 
+   mutate(c1 = replace(c1, c1 == "ipistrellus pygmaeus", "Pipistrellus pygmaeus")) %>% 
+   mutate(c1 = replace(c1, c1 == "lecotus auritus", "Plecotus auritus")) %>% 
+   mutate(c1 = replace(c1, c1 == "lecotus austriacus", "Plecotus austriacus")) %>% 
+   mutate(c1 = replace(c1, c1 == "yotis brandtii", "Myotis brandtii")) %>% 
+   mutate(c1 = replace(c1, c1 == "yotis daubentonii", "Myotis daubentonii")) %>% 
+   mutate(c1 = replace(c1, c1 == "yotis nattereri", "Myotis nattereri"))
+```
+
+####Figure 6: Distribution of total daily calls for each month, by species.  
+
+```{r}
+ggplot(all_sens_info, aes(x = month_ch, y = count_sp))+
+  scale_y_continuous(trans = log10_trans(), breaks = trans_breaks("log10", function(x) 10^x), labels = trans_format("log10", math_format(10^.x)))+
+  labs(x = "Month", y = "Daily Detected Calls")+
+  geom_boxplot()+
+  facet_wrap(.~c1)+
+  scale_x_discrete(labels=month.abb) +
+  theme_bw()+
+  theme(axis.text.y = element_text(lineheight = 0.5 , size = 18),
+        axis.text.x = element_text(size = 14, angle= 45, hjust = 1),
+        axis.title.x = element_text(size = 20),
+        axis.title.y = element_text(size = 20))
+```
+
+
+####Figure 7: Distribution of total daily calls for each month, by genus.  
+
+```{r}
+
+all_sens_info$g1<-vapply(strsplit(as.character(all_sens_info$c1)," "), `[`, 1, FUN.VALUE=character(1))
+
+all_sens_info<-all_sens_info %>%
+  group_by(sensor_id,g1, date)%>%
+  mutate(count_gen = n())%>%
+  ungroup()
+
+
+
+genus_plot<-ggplot(all_sens_info, aes(x = month_ch, y = count_gen))+
+    scale_y_continuous(trans = log10_trans(), breaks = trans_breaks("log10", function(x) 10^x), labels = trans_format("log10", math_format(10^.x)))+
+  labs(x = "Month", y = "Daily Detected Calls")+
+  geom_boxplot()+
+  facet_wrap(.~g1)+
+  scale_x_discrete(labels=month.abb) +
+  theme_bw()+
+  theme(axis.text.y = element_text(lineheight = 0.5 , size = 18),
+        axis.text.x = element_text(size = 14, angle= 45, hjust = 1),
+        axis.title.x = element_text(size = 20),
+        axis.title.y = element_text(size = 20),
+        strip.text.x = element_text(size = 20))
+
+png("Annual_Calls_genus.png", width = 10, height = 8, units = 'in', res = 300)
+genus_plot# Make plot
+dev.off()
+
+
+```
+
+```{r}
+
+all_sensors_active<-merge(all_active_df[, c("date", "deployment_id", "inactive_week")], all_sens_info, by = c("date", "deployment_id"))
+
+
+all_sensors_active %>%
+  filter(is.na(inactive_week))%>%
+ggplot(aes(x = month_ch, y = count_gen))+
+  geom_boxplot()+
+   scale_y_continuous(trans = log10_trans(), breaks = trans_breaks("log10", function(x) 10^x), labels = trans_format("log10", math_format(10^.x)))+
+  labs(x = "Month", y = "Daily Detected Calls")+
+  facet_wrap(.~as.factor(g1))+
+  scale_x_discrete(labels=month.abb) +
+  theme_bw()+
+  theme(axis.text.y = element_text(lineheight = 0.5 , size = 18),
+        axis.text.x = element_text(size = 14, angle= 45, hjust = 1),
+        axis.title.x = element_text(size = 20),
+        axis.title.y = element_text(size = 20),
+        strip.text.x = element_text(size = 20))
+
+```
+
+
+
+```{r}
+
+ggplot(all_sens_info, aes(p1, group = c1))+
+  geom_histogram()+
+  #scale_y_continuous(trans = "log1p")+
+  #ylim(0,5000)+
+  facet_wrap(~c1)
+
+
+
+ggplot(all_sens_info, aes(p1, group = c1))+
+  geom_histogram()+
+  #scale_y_log10()+
+  scale_y_continuous(breaks=c(1,10,100,1000,10000,100000, 1000000),trans = "log1p")+
+  #ylim(0,5000)+
+  ylab("Count (log1p)")+
+  xlab("Classification Probability")+
+  facet_wrap(~c1)
+
+
+
+```
+####Figure 8: Distribution of total daily calls for each month, by habitat type.
+
+```{r}
+all_sens_info<-all_sens_info %>%
+  group_by(sensor_id,Habitat, date)%>%
+  mutate(count_hab = n())%>%
+  ungroup()
+
+ggplot(all_sens_info, aes(x = month_ch, y = log10(count_hab)))+
+  geom_boxplot()+
+  facet_wrap(.~Habitat)+
+  labs(x = "Month", y = "Log10 Daily Calls")+
+  scale_x_discrete(labels=month.abb) +
+  theme_bw()+
+  theme(axis.text.y = element_text(lineheight = 0.5 , size = 18),
+        axis.text.x = element_text(size = 14, angle= 45, hjust = 1),
+        axis.title.x = element_text(size = 20),
+        axis.title.y = element_text(size = 20))
+```
+
+####Figure 9: Distribution of total daily calls for each month, by deployment.
+
+```{r}
+all_sens_info<-all_sens_info %>%
+  group_by(deployment_id, date)%>%
+  mutate(count_sens = n())%>%
+  ungroup()
+
+ggplot(all_sens_info, aes(x = month_ch, y = log10(count_sens)))+
+  geom_boxplot()+
+  facet_wrap(.~as.numeric(deployment_id))+
+  labs(x = "Month", y = "Log10 Daily Calls")+
+  scale_x_discrete(labels=month.abb) +
+  theme_bw()+
+  theme(axis.text.y = element_text(lineheight = 0.5 , size = 12),
+        axis.text.x = element_text(size = 12, angle= 45, hjust = 1),
+        axis.title.x = element_text(size = 20),
+        axis.title.y = element_text(size = 20))
+
+```
+
+
+
+```{r,echo = FALSE, eval = FALSE}
+library(suncalc)
+library(lubridate)
+
+QEOP_loc<-cbind(mean(unique(all_sens_info$Lat)), mean(unique(all_sens_info$Lon)))
+
+
+suntimes<-getSunlightTimes(lat = QEOP_loc[1], lon = QEOP_loc[2], date = unique(as.Date(all_sens_info$date)), keep = c("sunrise", "sunset"), tz = "UTC")
+
+suntimes$date<-as.Date(suntimes$date)
+
+suntimes$sunrise<-if_else(suntimes$date < as.Date("2017-10-29") | (suntimes$date > as.Date("2018-03-24") & suntimes$date < as.Date("2018-10-28")), suntimes$sunrise - 3600 , suntimes$sunrise)
+
+suntimes$sunset<-if_else(suntimes$date < as.Date("2017-10-29") | (suntimes$date > as.Date("2018-03-24") & suntimes$date < as.Date("2018-10-28")), suntimes$sunset - 3600 , suntimes$sunset)
+
+
+suntimes$date<-as.Date(suntimes$date)
+all_sens_info$date<-as.Date(all_sens_info$date)
+
+df<-merge(suntimes, all_sens_info, by="date")
+df$sunrise <- strftime(df$sunrise, format="%H:%M:%S")
+df$sunrise <- as.POSIXct(df$sunrise, format="%H:%M:%S")
+
+ggplot(df, aes(x = date, y = sunrise))+
+  #geom_boxplot(aes(fill=Habitat))+ 
+  geom_line()
+
+#df$sunset_diff<-  as.numeric(df$sunset - df$timestamp)
+
+#hist(df$sunset_diff/3600, main = "", xlab = "Hours Since Sunset")
+
+
+```
+
+
+
+
+
+
+
+
+
