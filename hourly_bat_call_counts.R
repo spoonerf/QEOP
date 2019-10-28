@@ -36,8 +36,11 @@ all_sens_info$deployment_id<-paste(all_sens_info$sensor_id, all_sens_info$deploy
 hourly_data<-all_sens_info %>%
   filter(deployment_id != "4.1" & deployment_id != "5.2")%>%
   group_by(deployment_id, Habitat, uni_hr) %>%
-  summarise(hourly_count = n())%>%
-  arrange(-hourly_count)
+  mutate(hourly_count = n())%>%
+  arrange(-hourly_count)%>%
+  select(date, Habitat, deployment_id, Lat, Lon, hourly_count, uni_hr)%>%
+  distinct()%>%
+  ungroup()
 
 ##adding in the hours where there were no bat calls
 
@@ -48,9 +51,10 @@ all_deps<-rep(unique(hourly_data$deployment_id), each = length(all_hours))
 habs<-unique(hourly_data[,c("deployment_id", "Habitat")])
 
 all_df<-data.frame(all_hours, all_deps,hourly_count = 0)
-
+all_df$all_deps<-as.character(all_df$all_deps)
 
 all_hours_df<-merge(all_df, hourly_data, by.x = c("all_deps","all_hours"), by.y = c("deployment_id", "uni_hr"), all=TRUE)
+all_hours_df<-unique(all_hours_df)
 
 
 all_hours_df<-merge(all_hours_df, habs, by.x = "all_deps", by.y = "deployment_id")
@@ -82,7 +86,7 @@ for (i in unique(df$deployment_id)){
   
 }
 
-sensor_down<-which(all_sensors_df$hours_inactive >= 168)
+sensor_down<-which(all_sensors_df$hours_inactive >= 168)  ###finding runs where a sensor has been inactive for a week or longer
 
 
 all_sensors_df$active<-1
@@ -94,7 +98,7 @@ all_sensors_df$active[sensor_down]<-0
 ###getting rid of dates where the sensors were thought not to be working
 
 
-ggplot(all_sensors_df, aes(log10(count), group = deployment_id))+
+ggplot(all_sensors_df, aes(log1p(count), group = deployment_id))+
   geom_histogram(bins = 100)+
   facet_wrap(.~deployment_id)
 
@@ -128,8 +132,27 @@ head(arrange(all_sensors_df,-count))
 
 
 
+####Removing sensors which we aren't including and 
+#Removing times which are 2 hours before sunset and 2 hours after sunrise
 
 
+all_sens<-all_sensors_df %>%
+  filter(deployment_id != "1.1" & deployment_id != "6.1" & deployment_id != "11.1") %>% #high rates of false positives
+  filter(deployment_id != "3.1" & deployment_id != "4.2" & deployment_id != "5.1"& deployment_id != "15.1")   #no record of false positive/false negative rates
+
+
+library(suncalc)
+
+
+
+
+
+sunset<-getSunlightTimes(date = as.Date(all_sensors_df$time_hour),lat = 51.543523, lon = -0.016214 ,keep = "sunset", tz = "UTC")
+
+
+all_sensors_df$date<-as.Date(all_sensors_df$time_hour)
+
+all_suns_df<-merge(all_sensors_df, sunset, by = "date")
 
 
 

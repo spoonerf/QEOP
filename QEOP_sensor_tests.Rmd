@@ -13,6 +13,7 @@ knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 library(dplyr)
 library(ggplot2)
 library(knitr)
+library(lubridate)
 
 source("D:/Fiona/useful_functions.R")
 
@@ -30,7 +31,6 @@ all_files_out<-unlist(path_out)
 
 all_files_num<-gsub("[^0-9]", "", all_files_out) 
 
-library(lubridate)
 dates<-as_datetime(as.numeric(all_files_num)/1000)
 
 dates_files<-data.frame(all_files, all_files_out, dates)
@@ -92,6 +92,11 @@ verification<-dplyr::select(fpfn, c("IN.FILE", "MANUAL.ID"))
 
 all_df<-merge(all_samp, verification, by.x="all_files_out", by.y = "IN.FILE")
 
+
+all_df$FP<-ifelse(all_df$classification == "Bat" & all_df$MANUAL.ID == "No bat", 1, 0)
+
+all_df$FN<-ifelse(all_df$classification == "No bat" & all_df$MANUAL.ID == "Bat", 1, 0)
+
 all_df$correct_class<-all_df$classification == all_df$MANUAL.ID
 
 ```
@@ -114,7 +119,7 @@ sensor_no<-as.numeric(gsub("[^0-9]", "", sensor_out))
 
 dates_files$sensor_no<-sensor_no
 
-all_df<-merge(all_df, dates_files, by = "all_files_out")
+all_df<-merge(all_df, dates_files, by = c("all_files_out", "all_files", "dates"))
 ```
 
 
@@ -167,8 +172,9 @@ Sensors 1 and 11 also do not perform well with TPR of 61.5% and 64.4% respective
 bat_sens<-all_df %>%
   group_by(sensor_no)%>%
   filter(classification == "Bat")%>%
-  mutate(true_count = sum(correct_class[correct_class== TRUE]),total_count = n() , true_pos_prop = true_count/total_count)%>%
-  select(sensor_no, true_count, total_count, true_pos_prop)%>%
+  mutate(true_count = sum(correct_class[correct_class== TRUE]),total_count = n() , false_pos_prop = 1 -  (true_count/total_count))%>%
+  select(sensor_no, true_count, total_count, false_pos_prop)%>%
+  arrange(sensor_no)%>%
   distinct()
 
 
@@ -185,8 +191,9 @@ kable(bat_sens)
 no_bat_sens<-all_df %>%
   group_by(sensor_no)%>%
   filter(classification == "No bat")%>%
-  mutate(true_count = sum(correct_class[correct_class== TRUE]),total_count = n() , true_neg_prop = true_count/total_count)%>%
-  select(sensor_no, true_count, total_count, true_neg_prop)%>%
+  mutate(true_count = sum(correct_class[correct_class== TRUE]),total_count = n() , false_neg_prop = 1 - (true_count/total_count))%>%
+  select(sensor_no, true_count, total_count, false_neg_prop)%>%
+  arrange(sensor_no)%>%
   distinct()
 
 
@@ -198,12 +205,41 @@ knitr::kable(no_bat_sens)
 
 ```{r, eval = FALSE}
 
-all_files<-merge(dates_files, all_df, by = c("all_files_out"))
+#all_files<-merge(dates_files, all_df, by = c("all_files_out"))
 
-all_files<-all_files[,c("all_files_out", "all_files", "dates", "classification", "MANUAL.ID", "correct_class", "sensor_no")]
-#write.csv(all_files, "all_sensor_fn_fp.csv", row.names = FALSE)
+all_files<-all_df[,c("all_files_out", "all_files", "dates", "classification", "MANUAL.ID", "FP","FN","correct_class", "sensor_no")]
+write.csv(all_files, "all_sensor_fn_fp.csv", row.names = FALSE)
 
 
 ```
 
+
+```{r, echo=FALSE, eval=FALSE}
+
+bat_fp<-all_df[all_df$correct_class == FALSE & all_df$classification == "Bat",]
+
+bat_fp$all_files<-as.character(bat_fp$all_files.x)
+
+strsplit(bat_fp$all_files, "//")
+
+basefols <- bat_fp$all_files %>%
+    strsplit( "//" ) %>%
+    sapply( tail, 1 )
+
+newdir<-"D:/Fiona/QEOP/false_pos_files/"
+
+newfiles<-paste0(newdir, basefols)
+
+dir_creator<-function(folder){
+  
+  dir.create(folder, recursive = TRUE)
+}
+
+lapply(unique(dirname(newfiles)), dir_creator)
+
+
+file.copy(bat_fp$all_files, newfiles)
+
+
+```
 

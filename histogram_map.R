@@ -12,6 +12,10 @@ library(raster)
 library(here)
 library(sf)
 
+source("API_key.R")
+
+register_google(key = api_key)
+
 
 all_bats<-readRDS("all_sensor_deployments.RDS")
 
@@ -115,9 +119,12 @@ map.test.centroids<-unique(map.test.centroids)
 map.test.centroids<-merge(unique(all_bats[,c("Habitat", "deployment_id")]), map.test.centroids, by.x = "deployment_id", by.y= "OBJECTID")
 
 
-map.test <- ggmap(get_map(location = lnd, source = "stamen", maptype = "toner-lite", color = "bw"), force = TRUE)+
+
+#map.test <- ggmap(get_map(location = lnd, source = "stamen", maptype = "toner-lite", color = "bw", force = TRUE))+
+map.test <- ggmap(get_map(location = lnd, force = TRUE))+
   labs(x = "Longitude", y = "Latitude", fill = "Habitat")+
-  geom_sf(data = qeop_sf_wgs, aes(fill = QEOP_Hab),colour = NA, inherit.aes = FALSE)+
+  geom_sf(data = qeop_sf_wgs, aes(fill = QEOP_Hab),colour = NA, inherit.aes 
+          = FALSE)+
   scale_fill_manual(values = cols)+
   geom_point(data =map.test.centroids, aes(x = Lon, y= Lat, col = Habitat), size = 3)+
   scale_color_manual(values = cols)+
@@ -125,7 +132,7 @@ map.test <- ggmap(get_map(location = lnd, source = "stamen", maptype = "toner-li
         legend.text=element_text(size=14),
         text = element_text(size=14), 
         axis.text.x  = element_text(size=12),
-        axis.text.y = element_text(size=12) )
+        axis.text.y = element_text(size=12))
 
 map.test
 
@@ -182,3 +189,11 @@ result_plot
 png("histo_polar_bar.png", width = 8, height = 12, units = 'in', res = 750)
 result_plot# Make plot
 dev.off()
+
+
+
+
+m<-matrix(c(-0.017814, 51.541923, -0.014614, 51.545123), ncol = 2, nrow = 2)
+bbox(m)
+get_map(location = m, source = "stamen", maptype = "toner-lite", color = "bw", force = TRUE)
+
