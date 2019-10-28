@@ -330,9 +330,12 @@ rnd_df<-rnd_seq %>%
   group_by(deployment_id) %>%
   arrange(sensor_id) %>% 
   tidyr::fill(sensor_id, Lat, Lon) %>% 
+  ungroup() %>% 
   mutate(date = date(rnd_df$hour_rnd))
-  ungroup()
+ 
 
+#write.csv(rnd_df, "hourly_counts_all_sensors.csv", row.names = FALSE)
+  
 ```
 
 Weather data
@@ -404,15 +407,19 @@ all_hours_c_data<-merge(all_hours, hourly_climate_data, by = "round_time", all =
 
 all_hours_c_data<-all_hours_c_data[complete.cases(all_hours_c_data),]
 
-#saveRDS(hourly_climate_data, "QEOP_hourly_climate_data_2019_10_28.RDS")
+#write.csv(hourly_climate_data, "QEOP_hourly_climate_data_2019_10_28.csv", row.names = FALSE)
 
 ```
 
+Event Data
+
+```{r}
+
+online<-read.csv(here::here("Event_Data/attendances.csv"))
 
 
 
-
-
+```
 
 
 
