@@ -7,13 +7,15 @@ output: html_document
 ---
 ```{r}
 library(chron)
-library(scales)
-library(lubridate)
-library(ggplot2)
-library(vroom)
+library(data.table)
 library(dplyr)
+library(ggplot2)
+library(here)
+library(jsonlite)
+library(lubridate)
+library(scales)
 library(tidyr)
-
+library(vroom)
 ```
 
 
@@ -328,17 +330,81 @@ rnd_df<-rnd_seq %>%
   group_by(deployment_id) %>%
   arrange(sensor_id) %>% 
   tidyr::fill(sensor_id, Lat, Lon) %>% 
+  mutate(date = date(rnd_df$hour_rnd))
   ungroup()
 
+```
 
-rnd_df$date<-date(rnd_df$hour_rnd)
+Weather data
 
+
+```{r}
+files<-list.files(here::here("/data_archive/weather_data/pws2017timberhourly"), full.names = TRUE, pattern = "*.json")
+
+files<-files[grepl("/20", files)]
+
+
+json2df<-function(json){
+
+  # Give the input file name to the function.
+  if(!is.null(count.fields(json))){
+    result <- fromJSON(txt = json)
+    
+    # Convert JSON file to a data frame.
+    json_data_frame <- as.data.frame(result)
+    json_data_frame <- data.frame(json_data_frame[,-15],json_data_frame$observations.metric)
+    
+    print(json)
+    return(json_data_frame)    
+  }
+  
+}
+
+json_out<-lapply(files, json2df) # 25th may 2017 empty file need a catch for that
+
+json_df<-do.call("rbind", json_out)
 ```
 
 
 ```{r}
+json_df$observations.obsTimeUtc<- as.POSIXct(json_df$observations.obsTimeUtc, format = "%Y-%m-%dT%H:%M:%SZ", tz = "UTC")
+attr(json_df$observations.obsTimeUtc, "tzone") <- "UTC" 
+json_df$date<-date(json_df$observations.obsTimeUtc)
+
+json_df$precipRate[is.na(json_df$precipRate)]<-0
+
+daily_climate_data<-json_df%>%
+  group_by(date)%>%
+  summarize(mean_temp = mean(tempAvg), 
+            mean_humid = mean(observations.humidityAvg), 
+            mean_wind = mean(windspeedAvg), 
+            mean_wind_gust = mean(windgustAvg),
+            precip_total = sum(precipRate))
+
+#write.csv(daily_climate_data, "QEOP_daily_climate_data_2019_10_28.csv", row.names = FALSE)
+```
 
 
+```{r}
+hourly_climate_data<-json_df
+hourly_climate_data$round_time<-round_date(as.POSIXct(hourly_climate_data$observations.obsTimeUtc, format = "%Y-%m-%d %H:%M:%S"), unit = "hour")
+
+all_hours<-data.frame(seq(min(hourly_climate_data$round_time), max(hourly_climate_data$round_time), by = "hour"))
+colnames(all_hours)<-"round_time"
+
+hourly_climate_data<-hourly_climate_data%>%
+  group_by(round_time)%>%
+  summarize(mean_temp = mean(tempAvg), 
+            mean_humid = mean(observations.humidityAvg), 
+            mean_wind = mean(windspeedAvg), 
+            mean_wind_gust = mean(windgustAvg),
+            precip_total = sum(precipRate))
+
+all_hours_c_data<-merge(all_hours, hourly_climate_data, by = "round_time", all = TRUE)
+
+all_hours_c_data<-all_hours_c_data[complete.cases(all_hours_c_data),]
+
+#saveRDS(hourly_climate_data, "QEOP_hourly_climate_data_2019_10_28.RDS")
 
 ```
 
