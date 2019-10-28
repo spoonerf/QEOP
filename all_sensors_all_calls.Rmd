@@ -263,9 +263,7 @@ all_sens_info$date_ch<-as.character(all_sens_info$date)
 all_sens_info$c1<-as.character(all_sens_info$c1)
 
 all_sens_info$month_ch<-all_sens_info$month
-```
 
-```{r}
 all_sens_info<-all_sens_info %>%
   group_by(sensor_id,c1, date)%>%
   mutate(count_sp = n())%>%
@@ -289,23 +287,57 @@ all_sens_info<-all_sens_info %>%
   ungroup()
 
 all_sens_info<-all_sens_info %>%
-  mutate(hour_u = hour(timestamp))%>%
-  group_by(date_ch, hour_u)%>%
-  mutate(count_hour_u = n()) %>% 
+  mutate(hour_rnd = round_date(timestamp, unit = "hour"), hour_u = hour(timestamp))%>%
+  group_by(hour_rnd, deployment_id)%>%
+  mutate(count_hour_dep_rnd = n()) %>% 
   ungroup()
 
 
 
-#vroom_write(all_sens_info, "all_sensors_all_calls.csv", delim = ",")
+#vroom_write(all_sens_info, "all_sensors_all_callsb.csv", delim = ",")
 
 ```
 
 ####Figure 5: Distribution of total daily calls for each month 
 
 ```{r}
+all_sens_info<-vroom("all_sensors_all_callsb.csv")
 
-all_sens_info<-vroom("all_sensors_all_calls.csv")
+hourly_sum<-all_sens_info %>% 
+  select(sensor_id, deployment_id, Lat, Lon, date, hour_rnd, count_hour_dep_rnd) %>% 
+  distinct()
 
+start<-min(all_sens_info$hour_rnd)
+end<-max(all_sens_info$hour_rnd)
+
+hourly_seq<-seq(start, end, by = "hour")
+
+
+
+
+```
+
+
+```{r}
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
 year_plot<-ggplot(all_sens_info, aes(x = all_sens_info$month, y = all_sens_info$count_date))+
   geom_boxplot()+
   scale_y_continuous(trans = log10_trans(), breaks = trans_breaks("log10", function(x) 10^x), labels = trans_format("log10", math_format(10^.x)))+
@@ -356,8 +388,6 @@ all_sens_info<-all_sens_info %>%
   group_by(sensor_id,g1, date)%>%
   mutate(count_gen = n())%>%
   ungroup()
-
-
 
 genus_plot<-ggplot(all_sens_info, aes(x = month_ch, y = count_gen))+
     scale_y_continuous(trans = log10_trans(), breaks = trans_breaks("log10", function(x) 10^x), labels = trans_format("log10", math_format(10^.x)))+
