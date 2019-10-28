@@ -12,6 +12,7 @@ library(lubridate)
 library(ggplot2)
 library(vroom)
 library(dplyr)
+library(tidyr)
 
 ```
 
@@ -311,9 +312,26 @@ start<-min(all_sens_info$hour_rnd)
 end<-max(all_sens_info$hour_rnd)
 
 hourly_seq<-seq(start, end, by = "hour")
+#names(hourly_seq)<-c("hour_rnd")
+
+sensors<-unique(select(all_sens_info, c("sensor_id", "deployment_id", "Lat", "Lon")))
+
+hourly_sens_seq<-rep(hourly_seq, times = length(sensors$deployment_id))
+deployment_sens_seq<-rep(sensors$deployment_id, each = length(hourly_seq))
+
+df_seq<-data.frame(hourly_sens_seq, deployment_sens_seq)
+colnames(df_seq)<-c("hour_rnd", "deployment_id")
+
+rnd_seq<-merge(df_seq,hourly_sum, by = c("hour_rnd","deployment_id"), all = TRUE)
+
+rnd_df<-rnd_seq %>% 
+  group_by(deployment_id) %>%
+  arrange(sensor_id) %>% 
+  tidyr::fill(sensor_id, Lat, Lon) %>% 
+  ungroup()
 
 
-
+rnd_df$date<-date(rnd_df$hour_rnd)
 
 ```
 
