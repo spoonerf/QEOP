@@ -11,6 +11,7 @@ library(scales)
 library(lubridate)
 library(ggplot2)
 library(vroom)
+library(dplyr)
 
 ```
 
@@ -210,7 +211,9 @@ colnames(ce_sensors)<-colnames(os_sens_df)
 all_calls_df<-rbind(ce_sensors, os_sens_df)
 
 sensor_info<-read.csv("sensor_info.csv")
-all_sens_info<-merge(all_sens_df, sensor_info, by.x = "sensor_id", by.y = "sensor_no")
+sensor_info$sensor_id<-gsub("\\..*","",sensor_info$deployment_id)
+
+all_sens_info<-merge(all_calls_df, sensor_info, by = "sensor_id")
 
 
 #write.csv(all_sens_info, "all_sensors_info_records_2019_10_25.csv", row.names = FALSE)
@@ -252,83 +255,14 @@ all_sens_info$time<-as.POSIXct(t, format="%H:%M:%S")
 
 all_sens_info<-all_sens_info[complete.cases(all_sens_info),]
 
-
 all_sens_info$Habitat<-as.character(all_sens_info$Habitat)
 
-#shifting anything before 6pm forwrd by a day
-#all_sens_info[hour(all_sens_info$timestamp) < 18, ]$time<-all_sens_info[hour(all_sens_info$timestamp) < 18, ]$time +days(1)
-
-```
-
-```{r, eval = FALSE}
-all_sens_info_night<-all_sens_info[all_sens_info$time < as.POSIXct(paste(Sys.Date()+1, " 06:00:00 GMT", sep="")),]
-
-all_sens_info_night <-all_sens_info_night %>%
-  group_by(sensor_id, month) %>%
-  mutate(count = n())%>%
-  ungroup
-
-give.n <- function(x){
-   #return(c(y = as.POSIXct(paste(Sys.Date(), "18:00:00", sep=" "), format = "%Y-%m-%d %H:%M:%S"), label = length(x)))
-  return(c(y = min(x), label = length(x)))
-}
-
-ggplot(all_sens_info_night, aes(x = month, y = time))+
-  geom_boxplot(aes(fill=Habitat))+
-  facet_wrap(.~as.numeric(deployment_id))+
-  labs(x = "Month", y = "Time")+
-  #stat_summary(fun.data = give.n, geom = "text")+
-  scale_x_discrete(labels=month.abb[c(1,4,7,10)], breaks = c("January", "April", "July", "October")) +
-  theme_bw()
-
-```
-
-
-
-```{r}
-
-# all_sensors_df$month<-months.Date(as.Date(all_sensors_df$date))
-# all_sensors_df$month<-factor(all_sensors_df$month, levels = month.name)
-
 all_sens_info$date_ch<-as.character(all_sens_info$date)
+
 all_sens_info$c1<-as.character(all_sens_info$c1)
+
 all_sens_info$month_ch<-all_sens_info$month
 ```
-
-```{r}
-all_sens_info<-all_sens_info %>%
-  group_by(date_ch)%>%
-  mutate(count_date = n())%>%
-  ungroup()
-
-#write.csv(all_sens_info, "all_sensors_all_calls.csv", row.names = FALSE)
-
-```
-
-####Figure 5: Distribution of total daily calls for each month 
-
-```{r}
-year_plot<-ggplot(all_sens_info, aes(x = all_sens_info$month, y = all_sens_info$count_date))+
-  geom_boxplot()+
-  scale_y_continuous(trans = log10_trans(), breaks = trans_breaks("log10", function(x) 10^x), labels = trans_format("log10", math_format(10^.x)))+
-  labs(x = "Month", y = "Daily Detected Calls")+
-  scale_x_discrete(labels=month.abb) +
-  theme_bw()+
-  theme(axis.text.y = element_text(lineheight = 0.5 , size = 18),
-        axis.text.x = element_text(size = 18, angle= 45, hjust = 1),
-        axis.title.x = element_text(size = 20),
-        axis.title.y = element_text(size = 20))
-
-
-png("Annual_Calls_wide.png", width = 10, height = 8, units = 'in', res = 300)
-year_plot# Make plot
-dev.off()
-
-
-```
-
-
-Distribution of daily calls over the year by species - some of the species names are spelt multiple ways, some wrong, some right.
 
 ```{r}
 all_sens_info<-all_sens_info %>%
@@ -347,7 +281,52 @@ all_sens_info<-all_sens_info %>%
    mutate(c1 = replace(c1, c1 == "yotis brandtii", "Myotis brandtii")) %>% 
    mutate(c1 = replace(c1, c1 == "yotis daubentonii", "Myotis daubentonii")) %>% 
    mutate(c1 = replace(c1, c1 == "yotis nattereri", "Myotis nattereri"))
+
+all_sens_info<-all_sens_info %>%
+  group_by(date_ch)%>%
+  mutate(count_date = n())%>%
+  ungroup()
+
+all_sens_info<-all_sens_info %>%
+  mutate(hour_u = hour(timestamp))%>%
+  group_by(date_ch, hour_u)%>%
+  mutate(count_hour_u = n()) %>% 
+  ungroup()
+
+
+
+#vroom_write(all_sens_info, "all_sensors_all_calls.csv", delim = ",")
+
 ```
+
+####Figure 5: Distribution of total daily calls for each month 
+
+```{r}
+
+all_sens_info<-vroom("all_sensors_all_calls.csv")
+
+year_plot<-ggplot(all_sens_info, aes(x = all_sens_info$month, y = all_sens_info$count_date))+
+  geom_boxplot()+
+  scale_y_continuous(trans = log10_trans(), breaks = trans_breaks("log10", function(x) 10^x), labels = trans_format("log10", math_format(10^.x)))+
+  labs(x = "Month", y = "Daily Detected Calls")+
+  scale_x_discrete(labels=month.abb) +
+  theme_bw()+
+  theme(axis.text.y = element_text(lineheight = 0.5 , size = 18),
+        axis.text.x = element_text(size = 18, angle= 45, hjust = 1),
+        axis.title.x = element_text(size = 20),
+        axis.title.y = element_text(size = 20))
+
+
+#png("Annual_Calls_wide.png", width = 10, height = 8, units = 'in', res = 300)
+year_plot# Make plot
+#dev.off()
+
+
+```
+
+
+Distribution of daily calls over the year by species - some of the species names are spelt multiple ways, some wrong, some right.
+
 
 ####Figure 6: Distribution of total daily calls for each month, by species.  
 
