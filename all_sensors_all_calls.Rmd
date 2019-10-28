@@ -66,6 +66,7 @@ dump$date<- as.Date(dump$datetime)
 
 dump$species_class<-substring(dump$species_class, 2)
 
+
 dump$time<- format(dump$datetime, "%H:%M:%S")
 
 
