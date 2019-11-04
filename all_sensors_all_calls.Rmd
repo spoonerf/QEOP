@@ -450,9 +450,6 @@ all_sensors_df$count_hour_dep_rnd[is.na(all_sensors_df$count_hour_dep_rnd)]<-0
 
 all_sensors_df$count_hour_dep_rnd[which(all_sensors_df$inactive_week == 1)]<-NA
 
-
-
-
 ```
 
 ```{r}
@@ -465,18 +462,21 @@ all_sensors_df$month<-lubridate::month(all_sensors_df$hour_rnd, label = TRUE, ab
 all_sensors_df$hours_inactive[is.na(all_sensors_df$hours_inactive)]<-0
 all_sensors_df$inactive_week[is.na(all_sensors_df$inactive_week)]<-0
 
-all_sensors_df<-all_sensors_df[-is.na(all_sensors_df$hour_rnd),]  #some NAs have snuck in - not sure where from...
+all_sensors_df<-all_sensors_df[!is.na(all_sensors_df$hour_rnd),]  #some NAs have snuck in - not sure where from...
+```
 
+```{r}
 all_sensors_df<-all_sensors_df %>% 
   group_by(hour_rnd) %>%
-  mutate(sum_active = sum(active_week), count_ef = count_hour_dep_rnd/sum_active) %>% 
+  mutate(sum_active = sum(active_week),  count_ef = count_hour_dep_rnd/sum_active) %>% 
   distinct() %>% 
   ungroup()
-  
+```
 
 
+```{r}
 
-year_plot<-ggplot(all_sensors_df, aes(x = month, y = count_ef))+
+year_plot<-ggplot(all_sensors_df, aes(x = month, y = count_hour_dep_rnd))+
   geom_boxplot()+
   #scale_y_continuous(trans = log10_trans(), breaks = trans_breaks("log10", function(x) 10^x), labels = trans_format("log10", math_format(10^.x)))+
   labs(x = "Month", y = "Hourly Detected Calls")+
@@ -497,8 +497,30 @@ year_plot# Make plot
 
 
 ```{r}
+
+year_effort_plot<-ggplot(all_sensors_df, aes(x = month, y = count_ef))+
+  geom_boxplot()+
+  #scale_y_continuous(trans = log10_trans(), breaks = trans_breaks("log10", function(x) 10^x), labels = trans_format("log10", math_format(10^.x)))+
+  labs(x = "Month", y = "Hourly Detected Calls")+
+  scale_x_discrete(labels=month.abb) +
+  theme_bw()+
+  theme(axis.text.y = element_text(lineheight = 0.5 , size = 18),
+        axis.text.x = element_text(size = 18, angle= 45, hjust = 1),
+        axis.title.x = element_text(size = 20),
+        axis.title.y = element_text(size = 20))
+
+
+#png("Annual_Calls_wide.png", width = 10, height = 8, units = 'in', res = 300)
+year_effort_plot# Make plot
+#dev.off()
+
+
+```
+
+
+```{r}
 ggplot(all_sensors_df, aes(x = hour_rnd, y = deployment_id, group = deployment_id))+
-  geom_line(color = "red", aes(x = hour_rnd, y = deployment_id), alpha = 0.5)+
+  geom_line(color = "red", aes(x = hour_rnd, y = deployment_id,size = log10(inactive_week)), alpha = 0.5)+
   geom_line(color = "steelblue",aes(size = log10(count_ef)))+
     #scale_y_reverse(breaks = seq(1, 16, by = 1))+
   scale_y_discrete(limits = c("15.1", "14.1", "13.1","12.1", "11.1","10.1", "9.1", "8.1","7.1","6.1","5.2","5.1","4.2","4.1","3.1","2.1","1.1"))+
