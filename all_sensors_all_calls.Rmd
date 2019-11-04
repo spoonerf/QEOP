@@ -331,7 +331,7 @@ rnd_df<-rnd_seq %>%
   arrange(sensor_id) %>% 
   tidyr::fill(sensor_id, Lat, Lon) %>% 
   ungroup() %>% 
-  mutate(date = date(rnd_df$hour_rnd))
+  mutate(date = date(hour_rnd))
  
 
 #write.csv(rnd_df, "hourly_counts_all_sensors.csv", row.names = FALSE)
@@ -415,7 +415,13 @@ Event Data
 
 ```{r}
 
-online<-read.csv(here::here("Event_Data/attendances.csv"))
+online<-read.csv(here::here("Event_Data/attendances.csv"), stringsAsFactors = FALSE)
+park<-read.csv(here::here("Event_Data/qeop_events_list_from_0101192.csv"), stringsAsFactors = FALSE) #removing events where attendance = 0 as these seem to be very low key e.g. filming/photography events in the park
+
+park <- park %>% 
+  mutate(In = as.POSIXct(In, format = "%d/%m/%y %H:%M"), Out = as.POSIXct(Out, format = "%d/%m/%y %H:%M")) %>% 
+  filter(Attendance != "0")
+  
 
 
 
@@ -429,6 +435,9 @@ online<-read.csv(here::here("Event_Data/attendances.csv"))
 
 
 ```{r}
+
+
+
 year_plot<-ggplot(all_sens_info, aes(x = all_sens_info$month, y = all_sens_info$count_date))+
   geom_boxplot()+
   scale_y_continuous(trans = log10_trans(), breaks = trans_breaks("log10", function(x) 10^x), labels = trans_format("log10", math_format(10^.x)))+
