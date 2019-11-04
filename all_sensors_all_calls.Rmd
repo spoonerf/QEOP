@@ -457,12 +457,24 @@ all_sensors_df$count_hour_dep_rnd[which(all_sensors_df$inactive_week == 1)]<-NA
 
 ```{r}
 
+all_sensors_df$week<-week(all_sensors_df$hour_rnd)
+all_sensors_df$month<-month(all_sensors_df$hour_rnd)
+all_sensors_df$year<-year(all_sensors_df$hour_rnd)
+
+all_sensors_df$active_week<-ifelse(is.na(all_sensors_df$inactive_week), 1, 0)
 
 
-year_plot<-ggplot(all_sens_info, aes(x = all_sens_info$month, y = all_sens_info$count_date))+
+all_sensors_df<-all_sensors_df %>% 
+  group_by(hour_rnd) %>%
+  mutate(sum_active = sum(active_week), count_ef = count_hour_dep_rnd/sum_active)
+  
+
+
+
+year_plot<-ggplot(all_sensors_df, aes(x =lubridate::month(hour_rnd, label = TRUE, abbr = TRUE), y = count_ef))+
   geom_boxplot()+
-  scale_y_continuous(trans = log10_trans(), breaks = trans_breaks("log10", function(x) 10^x), labels = trans_format("log10", math_format(10^.x)))+
-  labs(x = "Month", y = "Daily Detected Calls")+
+  #scale_y_continuous(trans = log10_trans(), breaks = trans_breaks("log10", function(x) 10^x), labels = trans_format("log10", math_format(10^.x)))+
+  labs(x = "Month", y = "Hourly Detected Calls")+
   scale_x_discrete(labels=month.abb) +
   theme_bw()+
   theme(axis.text.y = element_text(lineheight = 0.5 , size = 18),
