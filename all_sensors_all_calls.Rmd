@@ -407,32 +407,53 @@ all_hours_c_data<-merge(all_hours, hourly_climate_data, by = "round_time", all =
 
 all_hours_c_data<-all_hours_c_data[complete.cases(all_hours_c_data),]
 
+hourly_df_clim<-merge(rnd_df, all_hours_c_data, by.x = "hour_rnd", by.y = "round_time")
+
+
 #write.csv(hourly_climate_data, "QEOP_hourly_climate_data_2019_10_28.csv", row.names = FALSE)
 
-```
+#write.csv(hourly_df_clim, "hourly_calls_and_climate_data_2019_10_28.csv", row.names = FALSE)
 
-Event Data
+```
 
 ```{r}
 
-online<-read.csv(here::here("Event_Data/attendances.csv"), stringsAsFactors = FALSE)
-park<-read.csv(here::here("Event_Data/qeop_events_list_from_0101192.csv"), stringsAsFactors = FALSE) #removing events where attendance = 0 as these seem to be very low key e.g. filming/photography events in the park
+hourly_df_clim<-read.csv("hourly_calls_and_climate_data_2019_10_28.csv")
 
-park <- park %>% 
-  mutate(In = as.POSIXct(In, format = "%d/%m/%y %H:%M"), Out = as.POSIXct(Out, format = "%d/%m/%y %H:%M")) %>% 
-  filter(Attendance != "0")
+break_finder<-function(x){
+  nl_out<-rep(x, each = x)
+  }
+
+all_sensors_df<-NULL
+
+for (id in unique(hourly_df_clim$deployment_id)){
+
+  test<-hourly_df_clim[hourly_df_clim$deployment_id == id, ]
+  test<-arrange(test, hour_rnd)
+  rl<-rle(is.na(test$count))  
+  bf_out<-sapply(rl$lengths, break_finder)
+  test_na_run<-unlist(bf_out)
+  test_na_run[!is.na(test$count)]<-NA
+  test$hours_inactive<-test_na_run
+  all_sensors_df<-rbind(all_sensors_df,test)
+  print(id)
   
+  }
+
+all_sensors_df$inactive<-all_sensors_df$days_inactive
+
+all_sensors_df$inactive_week[all_sensors_df$hours_inactive < (7*24) | is.na(all_sensors_df$hours_inactive)]<-NA
+
+all_sensors_df$inactive_week[all_sensors_df$hours_inactive >= (7*24)]<-1
+
+all_sensors_df$count_hour_dep_rnd[is.na(all_sensors_df$count_hour_dep_rnd)]<-0
+
+all_sensors_df$count_hour_dep_rnd[which(all_sensors_df$inactive_week == 1)]<-NA
+
 
 
 
 ```
-
-
-
-
-
-
-
 
 ```{r}
 
@@ -456,6 +477,24 @@ year_plot# Make plot
 
 
 ```
+
+
+Event Data
+
+```{r}
+
+online<-read.csv(here::here("Event_Data/attendances.csv"), stringsAsFactors = FALSE)
+park<-read.csv(here::here("Event_Data/qeop_events_list_from_0101192.csv"), stringsAsFactors = FALSE) #removing events where attendance = 0 as these seem to be very low key e.g. filming/photography events in the park
+
+park <- park %>% 
+  mutate(In = as.POSIXct(In, format = "%d/%m/%y %H:%M"), Out = as.POSIXct(Out, format = "%d/%m/%y %H:%M")) %>% 
+  filter(Attendance != "0")
+  
+
+
+
+```
+
 
 
 Distribution of daily calls over the year by species - some of the species names are spelt multiple ways, some wrong, some right.
