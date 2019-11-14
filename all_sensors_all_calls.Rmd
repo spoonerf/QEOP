@@ -10,6 +10,7 @@ library(chron)
 library(data.table)
 library(dplyr)
 library(ggplot2)
+library(glmmTMB)
 library(here)
 library(jsonlite)
 library(lubridate)
@@ -228,7 +229,7 @@ all_sens_info<-merge(all_calls_df, sensor_info, by = "sensor_id")
 
 Adding deployment information column
 
-```{r, echo = FALSE}
+```{r, echo = FALSE,eval = FALSE}
 all_sens_info<-vroom::vroom("all_sensors_info_records_2019_10_25.csv")
 
 all_sens_info$deployment<-1
@@ -246,7 +247,7 @@ all_sens_info$deployment_id<-paste(all_sens_info$sensor_id, all_sens_info$deploy
 
 ```
 
-```{r, echo = FALSE}
+```{r, echo = FALSE,eval = FALSE}
 all_sens_info$month<-months.Date(as.Date(all_sens_info$date))
 
 all_sens_info$month<-factor(all_sens_info$month, levels = month.name)
@@ -292,7 +293,7 @@ all_sens_info<-all_sens_info %>%
 all_sens_info<-all_sens_info %>%
   mutate(hour_rnd = round_date(timestamp, unit = "hour"), hour_u = hour(timestamp))%>%
   group_by(hour_rnd, deployment_id)%>%
-  mutate(count_hour_dep_rnd = n()) %>% 
+  mutate(count_hour_dep_rnd = n()) %>%    #call count per rounded hour per deployment
   ungroup()
 
 
@@ -303,7 +304,7 @@ all_sens_info<-all_sens_info %>%
 
 ####Figure 5: Distribution of total daily calls for each month 
 
-```{r}
+```{r,eval = FALSE}
 all_sens_info<-vroom("all_sensors_all_callsb.csv")
 
 hourly_sum<-all_sens_info %>% 
@@ -341,7 +342,7 @@ rnd_df<-rnd_seq %>%
 Weather data
 
 
-```{r}
+```{r, eval = FALSE}
 files<-list.files(here::here("/data_archive/weather_data/pws2017timberhourly"), full.names = TRUE, pattern = "*.json")
 
 files<-files[grepl("/20", files)]
@@ -369,7 +370,7 @@ json_df<-do.call("rbind", json_out)
 ```
 
 
-```{r}
+```{r, eval = FALSE}
 json_df$observations.obsTimeUtc<- as.POSIXct(json_df$observations.obsTimeUtc, format = "%Y-%m-%dT%H:%M:%SZ", tz = "UTC")
 attr(json_df$observations.obsTimeUtc, "tzone") <- "UTC" 
 json_df$date<-date(json_df$observations.obsTimeUtc)
@@ -388,7 +389,7 @@ daily_climate_data<-json_df%>%
 ```
 
 
-```{r}
+```{r, eval = FALSE}
 hourly_climate_data<-json_df
 hourly_climate_data$round_time<-round_date(as.POSIXct(hourly_climate_data$observations.obsTimeUtc, format = "%Y-%m-%d %H:%M:%S"), unit = "hour")
 
@@ -519,6 +520,8 @@ year_effort_plot# Make plot
 
 
 ```{r}
+all_sensors_df$inactive_week[all_sensors_df$inactive_week == 0] <- NA
+
 ggplot(all_sensors_df, aes(x = hour_rnd, y = deployment_id, group = deployment_id))+
   geom_line(color = "red", aes(x = hour_rnd, y = deployment_id,size = log10(inactive_week)), alpha = 0.5)+
   geom_line(color = "steelblue",aes(size = log10(count_ef)))+
@@ -556,6 +559,88 @@ park <- park %>%
 
 
 ```
+
+
+
+
+###Fitting Models
+```{r}
+
+if (!dir.exists(here::here("model_output"))){
+  dir.create(here::here("model_output"))
+}
+
+dir <- here::here("model_output/")
+
+fit_zipoisson <- glmmTMB(count_hour_dep_rnd~ mean_temp+ 
+                              mean_wind + precip_total + 
+                              (1|deployment_id),   
+                              data = all_sensors_df,
+                              ziformula = ~1,
+                              family = poisson)
+
+saveRDS(fit_zipoisson, paste0(dir,"/zi_poisson.RDA"))
+
+
+fit_zinbinom1 <- glmmTMB(count_hour_dep_rnd ~ mean_temp+ 
+                              mean_wind + precip_total + 
+                             (1|deployment_id),   
+                             data = all_sensors_df,
+                             ziformula=~1,
+                             family=nbinom1)
+
+saveRDS(fit_zinbinom1, paste0(dir,"/zin_binom1.RDA"))
+
+fit_zinbinom2<- glmmTMB(count_hour_dep_rnd ~ mean_temp+ 
+                              mean_wind + precip_total + 
+                             (1|deployment_id),   
+                             data = all_sensors_df,   
+                              ziformula=~1,
+                              family=nbinom2)
+
+saveRDS(fit_zinbinom2, here::here(paste0(dir,"/zin_binom2.RDA")))
+
+
+fit_hnbinom1 <- glmmTMB(count_hour_dep_rnd ~ mean_temp+ 
+                              mean_wind + precip_total + 
+                             (1|deployment_id),   
+                             data = all_sensors_df,
+                        ziformula=~1,
+                        family=truncated_nbinom1)
+
+saveRDS(fit_hnbinom1, here::here(paste0(dir,"/zin_hnbinom1.RDA")))
+
+
+##Doesn't converge
+
+fit_hnbinom2 <- glmmTMB(count_hour_dep_rnd ~ mean_temp+ 
+                              mean_wind + precip_total + 
+                             (1|deployment_id),   
+                             data = all_sensors_df,
+                        ziformula=~1,
+                        family=truncated_nbinom2)
+
+saveRDS(fit_hnbinom2, here::here(paste0(dir,"/zin_hnbinom2.RDA")))
+
+
+
+AICtab(fit_zipoisson,fit_zinbinom1, fit_zinbinom2, fit_hnbinom1, fit_hnbinom2)
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
