@@ -6,6 +6,7 @@ date: "25 October 2019"
 output: html_document
 ---
 ```{r}
+library(bbmle)
 library(chron)
 library(data.table)
 library(dplyr)
@@ -570,6 +571,8 @@ if (!dir.exists(here::here("model_output"))){
   dir.create(here::here("model_output"))
 }
 
+all_sensors_df$month_num<-as.numeric(all_sensors_df$month)
+
 dir <- here::here("model_output/")
 
 fit_zipoisson <- glmmTMB(count_hour_dep_rnd~ mean_temp+ 
@@ -581,6 +584,22 @@ fit_zipoisson <- glmmTMB(count_hour_dep_rnd~ mean_temp+
 
 saveRDS(fit_zipoisson, paste0(dir,"/zi_poisson.RDA"))
 
+simulationOutput_pois <- simulateResiduals(fittedModel = fit_zipoisson)
+
+plot(simulationOutput_pois)
+
+testResiduals(simulationOutput_pois)
+
+testZeroInflation(simulationOutput_pois)
+
+testDispersion(simulationOutput_pois)
+
+simulationOutput_pois2 <- simulateResiduals(fittedModel = fit_zipoisson, refit = T, n = 20)
+testDispersion(simulationOutput_pois2)
+
+```
+
+```{r}
 
 fit_zinbinom1 <- glmmTMB(count_hour_dep_rnd ~ mean_temp+ 
                               mean_wind + precip_total + 
@@ -591,14 +610,49 @@ fit_zinbinom1 <- glmmTMB(count_hour_dep_rnd ~ mean_temp+
 
 saveRDS(fit_zinbinom1, paste0(dir,"/zin_binom1.RDA"))
 
-fit_zinbinom2<- glmmTMB(count_hour_dep_rnd ~ mean_temp+ 
+simulationOutput_zbin1 <- simulateResiduals(fittedModel = fit_zinbinom1)
+
+#plot(simulationOutput_zbin1)
+
+testResiduals(simulationOutput_zbin1)
+```
+
+
+```{r}
+
+
+all_sensors_df$inactive_week[is.na(all_sensors_df$inactive_week)]<-0
+
+all_sensors_df_cc<-all_sensors_df[complete.cases(all_sensors_df),]
+
+fit_zinbinom2 <- glmmTMB(count_hour_dep_rnd ~ mean_temp+ 
                               mean_wind + precip_total + 
+                             (1|deployment_id),   
+                             data = all_sensors_df_cc,   
+                              ziformula=~1,
+                              family=nbinom2)
+
+
+simulationOutput_zbin2 <- simulateResiduals(fittedModel = fit_zinbinom2)
+
+testZeroInflation(simulationOutput_zbin2)
+testDispersion(simulationOutput_zbin2)
+
+plotResiduals(all_sensors_df$mean_temp, simulationOutput_zbin2$scaledResiduals)
+``` 
+
+
+```{r}
+fit_zinbinom2_mon_circ <- glmmTMB(count_hour_dep_rnd ~ mean_temp+ 
+                              mean_wind + precip_total + 
+                              sin(month_num/12 * pi) + 
+                              cos(month_num/12 * pi) +
                              (1|deployment_id),   
                              data = all_sensors_df,   
                               ziformula=~1,
                               family=nbinom2)
 
-saveRDS(fit_zinbinom2, here::here(paste0(dir,"/zin_binom2.RDA")))
+saveRDS(fit_zinbinom2, paste0(dir,"/zin_binom2.RDA"))
 
 
 fit_hnbinom1 <- glmmTMB(count_hour_dep_rnd ~ mean_temp+ 
@@ -608,7 +662,7 @@ fit_hnbinom1 <- glmmTMB(count_hour_dep_rnd ~ mean_temp+
                         ziformula=~1,
                         family=truncated_nbinom1)
 
-saveRDS(fit_hnbinom1, here::here(paste0(dir,"/zin_hnbinom1.RDA")))
+saveRDS(fit_hnbinom1, paste0(dir,"/zin_hnbinom1.RDA"))
 
 
 ##Doesn't converge
@@ -620,7 +674,7 @@ fit_hnbinom2 <- glmmTMB(count_hour_dep_rnd ~ mean_temp+
                         ziformula=~1,
                         family=truncated_nbinom2)
 
-saveRDS(fit_hnbinom2, here::here(paste0(dir,"/zin_hnbinom2.RDA")))
+saveRDS(fit_hnbinom2, paste0(dir,"/zin_hnbinom2.RDA"))
 
 
 
