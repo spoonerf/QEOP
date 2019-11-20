@@ -575,10 +575,17 @@ all_sensors_df$month_num<-as.numeric(all_sensors_df$month)
 
 dir <- here::here("model_output/")
 
+all_sensors_df$inactive_week[is.na(all_sensors_df$inactive_week)]<-0
+
+all_sensors_df_cc<-all_sensors_df[complete.cases(all_sensors_df),]
+
+all_sensors_df_cc$month<-as.factor(all_sensors_df_cc$month_num)
+
+
 fit_zipoisson <- glmmTMB(count_hour_dep_rnd~ mean_temp+ 
                               mean_wind + precip_total + 
                               (1|deployment_id),   
-                              data = all_sensors_df,
+                              data = all_sensors_df_cc,
                               ziformula = ~1,
                               family = poisson)
 
@@ -594,8 +601,8 @@ testZeroInflation(simulationOutput_pois)
 
 testDispersion(simulationOutput_pois)
 
-simulationOutput_pois2 <- simulateResiduals(fittedModel = fit_zipoisson, refit = T, n = 20)
-testDispersion(simulationOutput_pois2)
+# simulationOutput_pois2 <- simulateResiduals(fittedModel = fit_zipoisson, refit = T, n = 20)
+# testDispersion(simulationOutput_pois2)
 
 ```
 
@@ -604,7 +611,7 @@ testDispersion(simulationOutput_pois2)
 fit_zinbinom1 <- glmmTMB(count_hour_dep_rnd ~ mean_temp+ 
                               mean_wind + precip_total + 
                              (1|deployment_id),   
-                             data = all_sensors_df,
+                             data = all_sensors_df_cc,
                              ziformula=~1,
                              family=nbinom1)
 
@@ -613,6 +620,10 @@ saveRDS(fit_zinbinom1, paste0(dir,"/zin_binom1.RDA"))
 simulationOutput_zbin1 <- simulateResiduals(fittedModel = fit_zinbinom1)
 
 #plot(simulationOutput_zbin1)
+
+testZeroInflation(simulationOutput_zbin1)
+
+testDispersion(simulationOutput_zbin1)
 
 testResiduals(simulationOutput_zbin1)
 ```
@@ -638,9 +649,88 @@ simulationOutput_zbin2 <- simulateResiduals(fittedModel = fit_zinbinom2)
 testZeroInflation(simulationOutput_zbin2)
 testDispersion(simulationOutput_zbin2)
 
-plotResiduals(all_sensors_df$mean_temp, simulationOutput_zbin2$scaledResiduals)
+plotResiduals(all_sensors_df_cc$mean_temp, simulationOutput_zbin2$scaledResiduals,quantreg = T)
 ``` 
 
+
+```{r}
+
+
+all_sensors_df$inactive_week[is.na(all_sensors_df$inactive_week)]<-0
+
+all_sensors_df_cc<-all_sensors_df[complete.cases(all_sensors_df),]
+all_sensors_df_cc$month<-as.factor(all_sensors_df_cc$month_num)
+
+fit_zinbinom2_disp <- glmmTMB(count_hour_dep_rnd ~ mean_temp+ 
+                              mean_wind + precip_total + 
+                             (1|deployment_id),   
+                             data = all_sensors_df_cc,   
+                              ziformula=~1,
+                              dispformula = ~deployment_id,
+                              family=nbinom2)
+
+
+
+simulationOutput_zbin2_disp <- simulateResiduals(fittedModel = fit_zinbinom2_disp)
+
+testZeroInflation(simulationOutput_zbin2_disp)
+testDispersion(simulationOutput_zbin2_disp)
+
+plotResiduals(all_sensors_df_cc$mean_temp, simulationOutput_zbin2_disp$scaledResiduals,quantreg = T)
+``` 
+
+```{r}
+
+
+all_sensors_df$inactive_week[is.na(all_sensors_df$inactive_week)]<-0
+
+all_sensors_df_cc<-all_sensors_df[complete.cases(all_sensors_df),]
+all_sensors_df_cc$month<-as.factor(all_sensors_df_cc$month_num)
+
+fit_zinbinom2_disp_mon <- glmmTMB(count_hour_dep_rnd ~ mean_temp+ 
+                              mean_wind + precip_total + 
+                             (1|deployment_id),   
+                             data = all_sensors_df_cc,   
+                              ziformula=~1,
+                              dispformula = ~deployment_id+month,
+                              family=nbinom2)
+
+
+
+simulationOutput_zbin2_disp_mon <- simulateResiduals(fittedModel = fit_zinbinom2_disp_mon)
+
+testZeroInflation(simulationOutput_zbin2_disp_mon)
+testDispersion(simulationOutput_zbin2_disp_mon)
+
+plotResiduals(all_sensors_df_cc$mean_temp, simulationOutput_zbin2_disp_mon$scaledResiduals,quantreg = T)
+
+``` 
+```{r}
+
+
+all_sensors_df$inactive_week[is.na(all_sensors_df$inactive_week)]<-0
+
+all_sensors_df_cc<-all_sensors_df[complete.cases(all_sensors_df),]
+all_sensors_df_cc$month<-as.factor(all_sensors_df_cc$month_num)
+
+fit_zinbinom2_disp_mon_zi <- glmmTMB(count_hour_dep_rnd ~ mean_temp+ 
+                              mean_wind + precip_total + 
+                             (1|deployment_id),   
+                             data = all_sensors_df_cc,   
+                              ziformula=~deployment_id+month,
+                              dispformula = ~deployment_id+month,
+                              family=nbinom2)
+
+
+
+simulationOutput_zbin2_disp_mon_zi <- simulateResiduals(fittedModel = fit_zinbinom2_disp_mon_zi)
+
+testZeroInflation(simulationOutput_zbin2_disp_mon_zi)
+testDispersion(simulationOutput_zbin2_disp_mon_zi)
+
+plotResiduals(all_sensors_df_cc$mean_temp, simulationOutput_zbin2_disp_mon_zi$scaledResiduals,quantreg = T)
+
+``` 
 
 ```{r}
 fit_zinbinom2_mon_circ <- glmmTMB(count_hour_dep_rnd ~ mean_temp+ 
