@@ -9,6 +9,7 @@ output: html_document
 library(bbmle)
 library(chron)
 library(data.table)
+library(DHARMa)
 library(dplyr)
 library(ggplot2)
 library(glmmTMB)
@@ -16,8 +17,10 @@ library(here)
 library(jsonlite)
 library(lubridate)
 library(scales)
+library(suncalc)
 library(tidyr)
 library(vroom)
+
 ```
 
 
@@ -418,7 +421,7 @@ hourly_df_clim<-merge(rnd_df, all_hours_c_data, by.x = "hour_rnd", by.y = "round
 
 ```
 
-```{r}
+```{r, eval = FALSE}
 
 hourly_df_clim<-read.csv("hourly_calls_and_climate_data_2019_10_28.csv")
 
@@ -465,14 +468,18 @@ all_sensors_df$hours_inactive[is.na(all_sensors_df$hours_inactive)]<-0
 all_sensors_df$inactive_week[is.na(all_sensors_df$inactive_week)]<-0
 
 all_sensors_df<-all_sensors_df[!is.na(all_sensors_df$hour_rnd),]  #some NAs have snuck in - not sure where from...
-```
 
-```{r}
+all_sensors_df$inactive_week[all_sensors_df$inactive_week == 0] <- NA
+
 all_sensors_df<-all_sensors_df %>% 
   group_by(hour_rnd) %>%
   mutate(sum_active = sum(active_week),  count_ef = count_hour_dep_rnd/sum_active) %>% 
   distinct() %>% 
   ungroup()
+
+
+write.csv(all_sensors_df, "all_sensors_df.csv", row.names = FALSE)
+
 ```
 
 
@@ -521,7 +528,6 @@ year_effort_plot# Make plot
 
 
 ```{r}
-all_sensors_df$inactive_week[all_sensors_df$inactive_week == 0] <- NA
 
 ggplot(all_sensors_df, aes(x = hour_rnd, y = deployment_id, group = deployment_id))+
   geom_line(color = "red", aes(x = hour_rnd, y = deployment_id,size = log10(inactive_week)), alpha = 0.5)+
@@ -548,24 +554,35 @@ ggplot(all_sensors_df, aes(x = hour_rnd, y = deployment_id, group = deployment_i
 Event Data
 
 ```{r}
-
-online<-read.csv(here::here("Event_Data/attendances.csv"), stringsAsFactors = FALSE)
+all_sensors_df <- vroom::vroom("all_sensors_df.csv")
+online<-vroom::vroom(here::here("Event_Data/attendances.csv"))
 park<-read.csv(here::here("Event_Data/qeop_events_list_from_0101192.csv"), stringsAsFactors = FALSE) #removing events where attendance = 0 as these seem to be very low key e.g. filming/photography events in the park
 
 park <- park %>% 
-  mutate(In = as.POSIXct(In, format = "%d/%m/%y %H:%M"), Out = as.POSIXct(Out, format = "%d/%m/%y %H:%M")) %>% 
-  filter(Attendance != "0")
+  dplyr::mutate(In = as.POSIXct(In, format = "%d/%m/%y %H:%M"), Out = as.POSIXct(Out, format = "%d/%m/%y %H:%M")) %>%   
+  dplyr::filter(Attendance != "0")
+
+online <- online %>% 
+  filter(event_type != "Tour")
+
+online$date <- as.Date(online$date, format = "%d/%m/%Y")
+
+dates <- data.frame(date = unique(all_sensors_df$date))
+all_online<- merge(online, dates, all = TRUE, by = "date")
+all_online$event_bin <- ifelse(is.na(all_online$event_type),0,1)
+
+all_sensors_df <- merge(all_sensors_df, all_online[, c("date","attendance", "event_bin")], by = "date")
   
-
-
-
 ```
 
 
 
-
-###Fitting Models
+###Sorting the data out
 ```{r}
+
+#dir <- here::here("model_output/")
+
+dir <- here::here("model_output_filtered_df")
 
 if (!dir.exists(here::here("model_output"))){
   dir.create(here::here("model_output"))
@@ -573,20 +590,50 @@ if (!dir.exists(here::here("model_output"))){
 
 all_sensors_df$month_num<-as.numeric(all_sensors_df$month)
 
-dir <- here::here("model_output/")
 
 all_sensors_df$inactive_week[is.na(all_sensors_df$inactive_week)]<-0
 
+all_sensors_df$event_bin <- as.factor(all_sensors_df$event_bin)
+
+all_sensors_df <- all_sensors_df %>% 
+  dplyr::select(date, hour_rnd, deployment_id, Lat, Lon, count_hour_dep_rnd, mean_temp, mean_humid, mean_wind, mean_wind_gust, precip_total, hours_inactive, inactive_week, month, sum_active, event_bin)
+  
 all_sensors_df_cc<-all_sensors_df[complete.cases(all_sensors_df),]
 
-all_sensors_df_cc$month<-as.factor(all_sensors_df_cc$month_num)
 
+```
+
+###Sorting the data out - filtering out data to exclude calls one hour before dusk and one hour after sunrise
+```{r}
+
+suns<-getSunlightTimes(date = as.Date(all_sensors_df_cc$hour_rnd),lat = 51.543523, lon = -0.016214 ,keep = c("sunrise","sunset"), tz = "UTC")
+
+suns<-unique(suns)
+
+all_sensors_df_cc <- merge(all_sensors_df_cc, suns, by = "date")
+
+all_sensors_df_cc$sunrise_lim <- all_sensors_df_cc$sunrise + (1*60*60)
+all_sensors_df_cc$sunset_lim <- all_sensors_df_cc$sunset - (1*60*60)
+
+all_sensors_df_cc$deployment_id <- as.factor(all_sensors_df_cc$deployment_id)
+
+all_sensors_df_cc <- all_sensors_df_cc %>% 
+  filter(hour_rnd <= sunrise_lim | hour_rnd >= sunset_lim) %>% 
+  filter(deployment_id != "1.1" & deployment_id != "6.1" & deployment_id != "11.1") %>% #high rates of false positives
+  filter(deployment_id != "3.1" & deployment_id != "4.2" & deployment_id != "5.1"& deployment_id != "15.1")  #%>% #no record of false positive/false negative rates
+ #filter(deployment_id != "4.1") 
+```
+
+###Fitting Models - Poisson
+
+```{r}
 
 fit_zipoisson <- glmmTMB(count_hour_dep_rnd~ mean_temp+ 
                               mean_wind + precip_total + 
-                              (1|deployment_id),   
+                              event_bin + (1|deployment_id),   
                               data = all_sensors_df_cc,
                               ziformula = ~1,
+                              dispformula = ~1,
                               family = poisson)
 
 saveRDS(fit_zipoisson, paste0(dir,"/zi_poisson.RDA"))
@@ -594,7 +641,6 @@ saveRDS(fit_zipoisson, paste0(dir,"/zi_poisson.RDA"))
 fit_zipoisson <- readRDS(paste0(dir,"/zi_poisson.RDA"))
 
 simulationOutput_pois <- simulateResiduals(fittedModel = fit_zipoisson, n = 250)
-
 
 plot(simulationOutput_pois)
 
@@ -604,18 +650,70 @@ testZeroInflation(simulationOutput_pois)
 
 testDispersion(simulationOutput_pois)
 
-# simulationOutput_pois2 <- simulateResiduals(fittedModel = fit_zipoisson, refit = T, n = 20)
-# testDispersion(simulationOutput_pois2)
+```
+
+###Fitting Models - Hurdle Model 1
+```{r}
+fit_hnbinom1 <- glmmTMB(count_hour_dep_rnd ~ mean_temp+ 
+                             mean_wind + precip_total + 
+                             event_bin + (1|deployment_id),   
+                             data = all_sensors_df_cc,
+                             ziformula=~1,
+                             dispformula = ~1,
+                             family=truncated_nbinom1)
+
+saveRDS(fit_hnbinom1, paste0(dir,"/zin_hnbinom1.RDA"))
+
+fit_hnbinom1 <- readRDS(paste0(dir,"/zin_hnbinom1.RDA"))
+
+simulationOutput_hurd1 <- simulateResiduals(fittedModel = fit_hnbinom1, n = 250)
+
+plot(simulationOutput_hurd1)
+
+testResiduals(simulationOutput_hurd1)
+
+testZeroInflation(simulationOutput_hurd1)
+
+testDispersion(simulationOutput_hurd1)
 
 ```
 
+###Fitting Models - Hurdle Model 2
+```{r}
+fit_hnbinom2 <- glmmTMB(count_hour_dep_rnd ~ mean_temp+ 
+                             mean_wind + precip_total + 
+                             event_bin + (1|deployment_id),   
+                             data = all_sensors_df_cc,
+                             ziformula= ~1,
+                             dispformula = ~1,
+                             family=truncated_nbinom2)
+
+saveRDS(fit_hnbinom2, paste0(dir,"/zin_hnbinom2.RDA"))
+
+fit_hnbinom2 <- readRDS(paste0(dir,"/zin_hnbinom2.RDA"))
+
+simulationOutput_hurd2 <- simulateResiduals(fittedModel = fit_hnbinom2, n = 250)
+
+
+plot(simulationOutput_hurd2)
+
+testResiduals(simulationOutput_hurd2)
+
+testZeroInflation(simulationOutput_hurd2)
+
+testDispersion(simulationOutput_hurd2)
+
+```
+
+###Fitting Models - Negative binomial 1
 ```{r}
 
 fit_zinbinom1 <- glmmTMB(count_hour_dep_rnd ~ mean_temp+ 
-                              mean_wind + precip_total + 
-                             (1|deployment_id),   
+                             mean_wind + precip_total + 
+                             event_bin + (1|deployment_id),   
                              data = all_sensors_df_cc,
-                             ziformula=~1,
+                             ziformula= ~1,
+                             dispformula = ~1,
                              family=nbinom1)
 
 saveRDS(fit_zinbinom1, paste0(dir,"/zin_binom1.RDA"))
@@ -625,23 +723,54 @@ fit_zinbinom1 <- readRDS(paste0(dir,"/zin_binom1.RDA"))
 
 simulationOutput_zbin1 <- simulateResiduals(fittedModel = fit_zinbinom1, n = 250)
 
-#plot(simulationOutput_zbin1)
-
 testZeroInflation(simulationOutput_zbin1)
 
 testDispersion(simulationOutput_zbin1)
 
 testResiduals(simulationOutput_zbin1)
+
+plotResiduals(all_sensors_df_cc$mean_temp, simulationOutput_zbin1$scaledResiduals,quantreg = T)
 ```
 
+###Fitting Models - Negative binomial 2
+```{r}
+
+fit_zinbinom2 <- glmmTMB(count_hour_dep_rnd ~ mean_temp+ 
+                              mean_wind + precip_total + 
+                             event_bin + (1|deployment_id),   
+                             data = all_sensors_df_cc,   
+                             ziformula=~1,
+                             family=nbinom2)
+
+saveRDS(fit_zinbinom2, paste0(dir,"/zin_binom2.RDA"))
+
+fit_zinbinom2 <- readRDS(paste0(dir,"/zin_binom2.RDA"))
+
+simulationOutput_zbin2 <- simulateResiduals(fittedModel = fit_zinbinom2)
+
+testZeroInflation(simulationOutput_zbin2)
+testDispersion(simulationOutput_zbin2)
+
+plotResiduals(all_sensors_df_cc$mean_temp, simulationOutput_zbin2$scaledResiduals,quantreg = T)
+``` 
+
+###Comparing models before digging deeper into model fit
+
+```{r}
+#AICtab(fit_zipoisson, fit_hnbinom1, fit_hnbinom2, fit_zinbinom1, fit_zinbinom2)
+
+AICtab(fit_zipoisson, fit_zinbinom1, fit_zinbinom2)
+```
+###Fitting Models - Negative binomial 1 with deployment as var in dispformula
 
 ```{r}
 
 fit_zinbinom1_dep <- glmmTMB(count_hour_dep_rnd ~ mean_temp+ 
-                              mean_wind + precip_total + 
-                             (1|deployment_id),   
+                             mean_wind + precip_total + 
+                             event_bin + (1|deployment_id),   
                              data = all_sensors_df_cc,
-                             ziformula=~deployment_id,
+                             ziformula = ~1,
+                             dispformula=~deployment_id,
                              family=nbinom1)
 
 saveRDS(fit_zinbinom1_dep, paste0(dir,"/zin_binom1_dep.RDA"))
@@ -659,13 +788,16 @@ testDispersion(simulationOutput_zbin1_dep)
 
 testResiduals(simulationOutput_zbin1_dep)
 ```
+
+###Fitting Models - Negative binomial 1 with month as var in dispformula
 ```{r}
 
 fit_zinbinom1_mon <- glmmTMB(count_hour_dep_rnd ~ mean_temp+ 
-                              mean_wind + precip_total + 
-                             (1|deployment_id),   
+                             mean_wind + precip_total + 
+                             event_bin + (1|deployment_id),   
                              data = all_sensors_df_cc,
-                             ziformula=~month,
+                             ziformula = ~1,
+                             dispformula=~month,
                              family=nbinom1)
 
 saveRDS(fit_zinbinom1_mon, paste0(dir,"/zin_binom1_mon.RDA"))
@@ -685,13 +817,15 @@ testResiduals(simulationOutput_zbin1_mon)
 
 ```
 
+###Fitting Models - Negative binomial 1 with deployment and month as vars in dispformula
 ```{r}
 
 fit_zinbinom1_dep_mon <- glmmTMB(count_hour_dep_rnd ~ mean_temp+ 
-                              mean_wind + precip_total + 
-                             (1|deployment_id),   
+                             mean_wind + precip_total + 
+                             event_bin + (1|deployment_id),   
                              data = all_sensors_df_cc,
-                             ziformula = ~ month + deployment_id,
+                             ziformula = ~1,
+                             dispformula = ~ month + deployment_id,
                              family = nbinom1)
 
 saveRDS(fit_zinbinom1_dep_mon, paste0(dir,"/zin_binom1_dep_mon.RDA"))
@@ -711,48 +845,49 @@ testResiduals(simulationOutput_zbin1_dep_mon)
 
 ```
 
-```{r}
-
-
-all_sensors_df$inactive_week[is.na(all_sensors_df$inactive_week)]<-0
-
-all_sensors_df_cc<-all_sensors_df[complete.cases(all_sensors_df),]
-
-fit_zinbinom2 <- glmmTMB(count_hour_dep_rnd ~ mean_temp+ 
-                              mean_wind + precip_total + 
-                             (1|deployment_id),   
-                             data = all_sensors_df_cc,   
-                              ziformula=~1,
-                              family=nbinom2)
-
-saveRDS(fit_zinbinom2, paste0(dir,"/zin_binom2.RDA"))
-
-fit_zinbinom2 <- readRDS(paste0(dir,"/zin_binom2.RDA"))
-
-simulationOutput_zbin2 <- simulateResiduals(fittedModel = fit_zinbinom2)
-
-testZeroInflation(simulationOutput_zbin2)
-testDispersion(simulationOutput_zbin2)
-
-plotResiduals(all_sensors_df_cc$mean_temp, simulationOutput_zbin2$scaledResiduals,quantreg = T)
-``` 
-
+###Fitting Models - Negative binomial 1 with deployment and month as vars in dispformula and ziformula
 
 ```{r}
-# 
-# 
-# all_sensors_df$inactive_week[is.na(all_sensors_df$inactive_week)]<-0
-# 
-# all_sensors_df_cc<-all_sensors_df[complete.cases(all_sensors_df),]
-# all_sensors_df_cc$month<-as.factor(all_sensors_df_cc$month_num)
+
+fit_zinbinom1_dep_mon_both <- glmmTMB(count_hour_dep_rnd ~ mean_temp+ 
+                             mean_wind + precip_total + 
+                             event_bin + (1|deployment_id),   
+                             data = all_sensors_df_cc,
+                             ziformula = ~ month + deployment_id,
+                             dispformula = ~ month + deployment_id,
+                             family = nbinom1)
+
+saveRDS(fit_zinbinom1_dep_mon_both, paste0(dir,"/zin_binom1_dep_mon_both.RDA"))
+
+fit_zinbinom1_dep_mon_both <- readRDS(paste0(dir,"/zin_binom1_dep_mon_both.RDA"))
+
+
+simulationOutput_zbin1_dep_mon_both <- simulateResiduals(fittedModel = fit_zinbinom1_dep_mon_both, n = 250)
+
+#plot(simulationOutput_zbin1)
+
+testZeroInflation(simulationOutput_zbin1_dep_mon_both)
+
+testDispersion(simulationOutput_zbin1_dep_mon_both)
+
+testResiduals(simulationOutput_zbin1_dep_mon_both)
+
+```
+
+
+
+
+
+###Fitting Models - Negative binomial 2 with deployment as var in dispformula
+```{r}
 
 fit_zinbinom2_disp <- glmmTMB(count_hour_dep_rnd ~ mean_temp+ 
-                              mean_wind + precip_total + 
-                             (1|deployment_id),   
+                             mean_wind + precip_total + 
+                             event_bin + (1|deployment_id),   
                              data = all_sensors_df_cc,   
-                              ziformula=~1,
-                              dispformula = ~deployment_id,
-                              family=nbinom2)
+                             ziformula=~1,
+                             dispformula = ~deployment_id,
+                             family=nbinom2)
 
 saveRDS(fit_zinbinom2_disp, paste0(dir,"/zin_binom2_disp.RDA"))
 
@@ -764,17 +899,44 @@ testZeroInflation(simulationOutput_zbin2_disp)
 testDispersion(simulationOutput_zbin2_disp)
 
 plotResiduals(all_sensors_df_cc$mean_temp, simulationOutput_zbin2_disp$scaledResiduals,quantreg = T)
-``` 
+```
+
 
 ```{r}
 
-fit_zinbinom2_disp_mon <- glmmTMB(count_hour_dep_rnd ~ mean_temp+ 
-                              mean_wind + precip_total + 
-                             (1|deployment_id),   
+fit_zinbinom2_mon <- glmmTMB(count_hour_dep_rnd ~ mean_temp+ 
+                             mean_wind + precip_total + 
+                             event_bin + (1|deployment_id),   
                              data = all_sensors_df_cc,   
-                              ziformula=~1,
-                              dispformula = ~deployment_id+month,
-                              family=nbinom2)
+                             ziformula=~1,
+                             dispformula = ~deployment_id+month,
+                             family=nbinom2)
+
+
+saveRDS(fit_zinbinom2_mon, paste0(dir,"/zin_binom2_mon.RDA"))
+
+fit_zinbinom2_mon <- readRDS(paste0(dir,"/zin_binom2_mon.RDA"))
+
+
+simulationOutput_zbin2_mon <- simulateResiduals(fittedModel = fit_zinbinom2_mon, n = 250)
+
+testZeroInflation(simulationOutput_zbin2_mon)
+testDispersion(simulationOutput_zbin2_mon)
+
+plotResiduals(all_sensors_df_cc$mean_temp, simulationOutput_zbin2_mon$scaledResiduals,quantreg = T)
+
+```
+
+###Fitting Models - Negative binomial 2 with deployment and month as vars in dispformula
+```{r}
+
+fit_zinbinom2_disp_mon <- glmmTMB(count_hour_dep_rnd ~ mean_temp+ 
+                             mean_wind + precip_total + 
+                             event_bin + (1|deployment_id),   
+                             data = all_sensors_df_cc,   
+                             ziformula=~1,
+                             dispformula = ~deployment_id+month,
+                             family=nbinom2)
 
 
 saveRDS(fit_zinbinom2_disp_mon, paste0(dir,"/zin_binom2_disp_mon.RDA"))
@@ -790,32 +952,187 @@ testDispersion(simulationOutput_zbin2_disp_mon)
 plotResiduals(all_sensors_df_cc$mean_temp, simulationOutput_zbin2_disp_mon$scaledResiduals,quantreg = T)
 
 ``` 
+
+###Fitting Models - Negative binomial 2 with deployment and month as vars in both dispformula and ziformula
+```{r}
+
+fit_zinbinom2_disp_mon_both <- glmmTMB(count_hour_dep_rnd ~ mean_temp+ 
+                             mean_wind + precip_total + 
+                             event_bin + (1|deployment_id),   
+                             data = all_sensors_df_cc,   
+                             ziformula=~deployment_id+month,
+                             dispformula = ~deployment_id+month,
+                             family=nbinom2)
+
+
+saveRDS(fit_zinbinom2_disp_mon_both, paste0(dir,"/zin_binom2_disp_mon_both.RDA"))
+
+fit_zinbinom2_disp_mon_both <- readRDS(paste0(dir,"/zin_binom2_disp_mon_both.RDA"))
+
+
+simulationOutput_zbin2_disp_mon_both <- simulateResiduals(fittedModel = fit_zinbinom2_disp_mon_both, n = 250)
+
+testZeroInflation(simulationOutput_zbin2_disp_mon_both)
+testDispersion(simulationOutput_zbin2_disp_mon_both)
+
+plotResiduals(all_sensors_df_cc$mean_temp, simulationOutput_zbin2_disp_mon_both$scaledResiduals,quantreg = T)
+
+``` 
+
+
 ```{r}
 
 
-all_sensors_df$inactive_week[is.na(all_sensors_df$inactive_week)]<-0
+AICtab(fit_zinbinom1_dep_mon, fit_zinbinom1, fit_zinbinom1_dep, fit_zinbinom1_mon, fit_zinbinom1_dep_mon_both, fit_zinbinom2, fit_zinbinom2_disp,fit_zinbinom2_mon, fit_zinbinom2_disp_mon, fit_zinbinom2_disp_mon_both )
 
-all_sensors_df_cc<-all_sensors_df[complete.cases(all_sensors_df),]
-all_sensors_df_cc$month<-as.factor(all_sensors_df_cc$month_num)
+plotResiduals(all_sensors_df_cc$mean_temp,simulationOutput_zbin1_dep_mon_both$scaledResiduals,quantreg = T)
 
-fit_zinbinom2_disp_mon_zi <- glmmTMB(count_hour_dep_rnd ~ mean_temp+ 
-                              mean_wind + precip_total + 
-                             (1|deployment_id),   
-                             data = all_sensors_df_cc,   
-                              ziformula=~deployment_id+month,
-                              dispformula = ~deployment_id+month,
-                              family=nbinom2)
+mlist <- list(fit_zinbinom1_dep_mon, fit_zinbinom1, fit_zinbinom1_dep, fit_zinbinom1_mon, fit_zinbinom1_dep_mon_both, fit_zinbinom2, fit_zinbinom2_disp,fit_zinbinom2_mon, fit_zinbinom2_disp_mon, fit_zinbinom2_disp_mon_both )
 
 
+```
 
-simulationOutput_zbin2_disp_mon_zi <- simulateResiduals(fittedModel = fit_zinbinom2_disp_mon_zi)
+```{r}
 
-testZeroInflation(simulationOutput_zbin2_disp_mon_zi)
-testDispersion(simulationOutput_zbin2_disp_mon_zi)
+model = fit_zinbinom1_dep_mon_both 
 
-plotResiduals(all_sensors_df_cc$mean_temp, simulationOutput_zbin2_disp_mon_zi$scaledResiduals,quantreg = T)
+sims=simulate(model, seed = 1, nsim = 1000)
 
-``` 
+simdatlist=lapply(sims, function(count){
+  cbind(count, all_sensors_df_cc[,c('mean_temp', 'mean_wind', 'precip_total', 'event_bin', 'deployment_id', 'month')])
+})
+
+simdatsums=lapply(simdatlist, function(x){
+  ddply(x, ~deployment_id+event_bin, summarize,
+  mean_count=mean(count))
+})
+
+ssd=do.call(rbind, simdatsums)
+
+
+real = ddply(all_sensors_df_cc, ~deployment_id+event_bin, summarize,
+ mean_count=mean(count_hour_dep_rnd))
+
+
+ggplot(ssd, aes(x = mean_count, color = event_bin)) +
+  geom_density(adjust = 10) +
+  facet_wrap( ~ deployment_id) +
+  geom_point(data = real,
+             aes(x = mean_count, y = 0.0025, color = event_bin),
+             size = 2) +
+  xlab("Predicted average hourly bat calls") + ylab(NULL)
+
+
+```
+
+```{r}
+
+model = fit_zinbinom1
+
+
+fit_zinbinom1_monde <- glmmTMB(count_hour_dep_rnd ~ mean_temp+ 
+                             mean_wind + precip_total + 
+                             event_bin + (1|deployment_id) + (1|month),   
+                             data = all_sensors_df_cc,
+                             ziformula= ~1,
+                             dispformula = ~1,
+                             family=nbinom1)
+
+model = fit_zinbinom1_monde
+
+all_sensors_df_cc$month_f <- factor(all_sensors_df_cc$month, levels=c('Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'))
+
+all_sensors_df_cc$bats_active_month <- NULL
+
+all_sensors_df_cc$bats_active_month <- ifelse( all_sensors_df_cc$month == "May" | all_sensors_df_cc$month == "Jun" | all_sensors_df_cc$month == "Jul" | all_sensors_df_cc$month == "Aug" | all_sensors_df_cc$month == "Sep" | all_sensors_df_cc$month == "Oct", "awake", "hibernating")
+
+sims=simulate(model, seed = 1, nsim = 1000)
+
+simdatlist=lapply(sims, function(count){
+  cbind(count, all_sensors_df_cc[,c('mean_temp', 'mean_wind', 'precip_total', 'event_bin', 'deployment_id', 'month', 'bats_active_month')])
+})
+
+simdatsums=lapply(simdatlist, function(x){
+  # ddply(x, ~event_bin+bats_active_month, summarize,
+  # mean_count=mean(count))
+ x %>% 
+  group_by(event_bin, bats_active_month) %>% 
+  mutate(mean_count_hib = mean(count)) %>% 
+  ungroup() %>% 
+  group_by(month, event_bin) %>% 
+  mutate(mean_count_month = mean(count))
+
+  })
+
+ssd=do.call(rbind, simdatsums)
+
+
+real <- all_sensors_df_cc %>% 
+  group_by(event_bin, bats_active_month) %>% 
+  mutate(mean_count_hib = mean(count_hour_dep_rnd)) %>% 
+  ungroup() %>% 
+  group_by(month, event_bin) %>% 
+  mutate(mean_count_month = mean(count_hour_dep_rnd))
+
+
+ggplot(ssd, aes(x = mean_count_hib, color = event_bin)) +
+  geom_density(adjust = 10) +
+  facet_wrap(~ bats_active_month) +
+  geom_point(data = real,
+             aes(x = mean_count_hib, y = 0.0045, color = event_bin),
+             size = 2) +
+  xlab("Predicted average hourly bat calls") + ylab(NULL)+xlim(0,400)
+
+
+
+
+ggplot(ssd[ssd$bats_active_month == "awake",], aes(x = mean_count_month, color = event_bin)) +
+  geom_density(adjust = 10) +
+  facet_wrap(~ month_f) +
+  geom_point(data = real[real$bats_active_month == "awake",],
+             aes(x = mean_count_month, y = 0.0045, color = event_bin),
+             size = 2) +
+  xlab("Predicted average hourly bat calls") + ylab(NULL)+xlim(0,400)
+
+
+```
+
+
+
+
+
+
+
+
+
+
+```{r}
+
+m1 <- glmmTMB(count_hour_dep_rnd ~ mean_temp+ 
+                             mean_wind + precip_total + 
+                             event_bin + (1|deployment_id),   
+                             data = all_sensors_df_cc,
+                             ziformula = ~ month + deployment_id,
+                             dispformula = ~ month + deployment_id,
+                             family = nbinom1)
+
+saveRDS(fit_zinbinom1_dep_mon_both, paste0(dir,"/zin_binom1_dep_mon_both.RDA"))
+
+fit_zinbinom1_dep_mon_both <- readRDS(paste0(dir,"/zin_binom1_dep_mon_both.RDA"))
+
+
+simulationOutput_zbin1_dep_mon_both <- simulateResiduals(fittedModel = fit_zinbinom1_dep_mon_both, n = 250)
+
+#plot(simulationOutput_zbin1)
+
+testZeroInflation(simulationOutput_zbin1_dep_mon_both)
+
+testDispersion(simulationOutput_zbin1_dep_mon_both)
+
+testResiduals(simulationOutput_zbin1_dep_mon_both)
+
+```
+
 
 ```{r}
 fit_zinbinom2_mon_circ <- glmmTMB(count_hour_dep_rnd ~ mean_temp+ 
@@ -1047,7 +1364,42 @@ ggplot(df, aes(x = date, y = sunrise))+
 
 ```
 
+```{r}
 
+lapply(mlist, logLik)
+
+cv_out <- cv.glm(glmfit = fit_zinbinom1_dep_mon, data = all_sensors_df_cc, K = 10)
+
+
+k_folds <- dismo::kfold(all_sensors_df_cc, k = 4)
+
+for(i in 1:4){
+  
+  train_data = all_sensors_df_cc[k_folds != i,]
+  test_data = all_sensors_df_cc[k_folds == i,]
+  
+  
+  model_update <- glmmTMB(count_hour_dep_rnd ~ mean_temp+ 
+                             mean_wind + precip_total + 
+                             event_bin + (1|deployment_id),   
+                             data =  train_data,
+                             ziformula = ~ month + deployment_id,
+                             dispformula = ~ month + deployment_id,
+                             family = nbinom1)
+  
+  prob <- predict(model_update, newdata=test_data, se.fit=TRUE, zitype="response")
+  outcome <- as.numeric(prob>pcut)
+  
+  test_data$predFE = prob$fit
+  test_data$predFE.min = prob$fit-1.96*prob$se.fit
+  test_data$predFE.max = prob$fit+1.96*prob$se.fit
+  
+  real=ddply(train_data, ~mean_temp+mean_wind+precip_total+event_bin+deployment_id+month, summarize, m=mean(count_hour_dep_rnd))
+
+  
+}
+
+```
 
 
 
