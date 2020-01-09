@@ -1,0 +1,1441 @@
+---
+title: "All Calls"
+author: "Fiona Spooner"
+date: "25 October 2019"
+output: html_document
+---
+```{r}
+library(bbmle)
+library(chron)
+library(data.table)
+library(DHARMa)
+library(dplyr)
+library(ggplot2)
+library(glmmTMB)
+library(here)
+library(jsonlite)
+library(lubridate)
+library(scales)
+library(suncalc)
+library(tidyr)
+library(vroom)
+
+```
+
+
+```{r, eval=FALSE}
+
+#dump<-read.table("qeop_dump_all.csv", fill=T, sep=",")
+
+dump_test<-read.table("qeop_dump_2019_02_23.csv", fill=T, sep=",")
+
+
+dump<-read.table("all_bat_2019_09_02a.csv", fill=T, sep=",",skip = 4)
+dumpb<-read.table("all_bat_2019_09_02b.csv", fill=T, sep=",", skip = 1)
+
+dump_all<-rbind(dump, dumpb)
+
+
+##adding in a column to identify each row with a sensor
+
+dump_all$sensor<-NA
+for (i in 1:15){
+  start_id<-min(which(grepl( paste("qeop_batstore_",i, sep=""),dump_all[,1])))
+  end_id<-max(which(grepl( paste("qeop_batstore_",i, sep=""),dump_all[,1])))
+  dump_all[start_id:end_id,]$sensor<-paste("Sensor_",i,sep="")
+  print(i)
+}
+
+table(dump_all$sensor)
+
+dump_all$sensor[1:776]<-1
+
+dump_all$sensor[1638302:1639016]<-7
+
+dump<-dump_all[!is.na(dump_all$sensor),]
+
+dump<-dump[,c(1,2,4,5,6,13,ncol(dump))]
+dump<-dump[grepl("\t",dump[,1]),]
+dump[,1]<-as.numeric(gsub("[\t(]","",dump[,1]))
+dump[,3]<-as.numeric(gsub("[^0-9.]", "",  dump[,3]))
+dump[,4]<-as.numeric(gsub("[^0-9.]", "",  dump[,4]))
+dump[,5]<-gsub("[[:punct:]]", "", dump[,5])
+dump[,5]<-substring(dump[,5],2)
+dump[,6]<-as.numeric(gsub("[^0-9.]", "",  dump[,6]))
+
+dump$sensor_no<-as.numeric(gsub("[^0-9.]", "",  dump$sensor))
+
+colnames(dump)<-c("ID", "datetime", "prob_bat","prob_sp","species_class","call_time","sensor", "sensor_no")
+
+dump$datetime<-as.POSIXct(dump$datetime,format="%Y-%m-%d %H:%M:%S")
+
+dump$date<- as.Date(dump$datetime)
+
+dump$species_class<-substring(dump$species_class, 2)
+
+
+dump$time<- format(dump$datetime, "%H:%M:%S")
+
+
+#write.csv(dump, "all_ce_tools_dump_2019_09_02a.csv", row.names = FALSE)
+
+```
+
+
+
+```{r, eval= FALSE , echo = FALSE}
+
+library(stringr)
+
+os_dirs<-list.dirs(here::here("data_archive/opensensors_Daniyar/qeoplogs_more/"))
+
+getmode<-function(v){
+  uniqv<-unique(v)
+  uniqv[which.max(tabulate(match(v, uniqv)))]
+}
+
+#getting rid of the folders with multiple dates in - removing anything which doesn't have the modal average number of characters. Bit shaky but okay for now.
+os_dirs<-os_dirs[nchar(os_dirs)==getmode(nchar(os_dirs))]
+
+
+os_tool_out<-function(os_dir){
+  file_list<-list.files(os_dir)
+  
+  for (file in file_list){
+      print(os_dir)
+      print(file)
+    
+      if(grepl(".csv", file)){
+         df_temp = read.table(paste(os_dir,"/", file, sep=""), sep=",", header = T, stringsAsFactors = F)
+         df_temp$sensor_id<-as.numeric(gsub("\\D", "", file))
+         df_temp$timestamp<-as.numeric(as.character(df_temp$timestamp))
+         df_temp$timestamp<-anytime(df_temp$timestamp/1000)
+         
+         df_out<-df_temp[,c("sensor_id","timestamp", "call_time", "prob_bat", "c1", "p1")]
+         
+      } 
+    
+      if (grepl(".txt", file)) {
+         #df_temp = read.table(paste(ce_dir,"/", file, sep=""))
+         df_temp = read.csv(paste(os_dir,"/", file, sep=""), header = FALSE)
+         cols<-paste("V", 1:ncol(df_temp), sep="")
+         df_temp$x <- apply( df_temp[ , cols ] , 1 , paste , collapse = "." )
+         
+         spl<-strsplit(df_temp$x, " ")
+         
+         get_neat_os_data<-function(x){
+           
+             sensor_id<-gsub("[^0-9]", "", x[which(grepl("sensor_bat",x))])
+             
+             timestamp<-gsub("[^0-9.]", "",paste(x[which(x== "timestamp:")+1],x[which(x== "timestamp:")+2],x[which(x== "timestamp:")+3],x[which(x== "timestamp:")+4], x[which(x== "timestamp:")+5], x[which(x== "timestamp:")+6], sep=""))
+             
+             timestamp<-toString(strsplit(timestamp, "[.]")[[1]][2:7])
+             
+             timestamp<-as.POSIXct(timestamp, format = "%Y, %m, %d, %H, %M, %S")  
+             call_time<-x[which(x == "call_time:")+1]
+             call_time<-as.numeric(substr(call_time, 1, nchar(call_time)-1)) 
+             
+             prob_bat<- x[which(x == "prob_bat:")+1]
+             prob_bat<-as.numeric(substr(prob_bat, 1, nchar(prob_bat)-1))  
+              
+             genus<-gsub("'","",x[which(x == "c1:")+1])
+             spec<-gsub("[[:punct:]]","",x[which(x == "c1:")+2])
+             
+             c1<-paste(genus, spec, sep = " ")
+             
+             p1<- x[which(x == "p1:")+1]
+             p1<-as.numeric(substr(p1, 1, nchar(p1)-1)) 
+             
+             df_out<-data.frame(sensor_id,timestamp, call_time, prob_bat, c1, p1)
+             colnames(df_out)<-c("sensor_id","timestamp", "call_time", "prob_bat", "c1", "p1")
+             print(df_out)
+         return(df_out)
+         }
+         
+         df_out<-lapply(spl,get_neat_os_data)
+         df_out<-do.call("rbind", df_out)
+         
+           }
+         #print(os_dir)
+         #print(file)
+         df = rbind(df, df_out)
+         #print(paste(os_dir, file, sep="/"))
+        
+          }
+  
+  return(df)
+}
+
+df<-data.frame()
+
+os_df<-lapply(os_dirs, os_tool_out)
+
+
+
+colnames <- c("sensor_id","timestamp", "call_time", "prob_bat", "c1", "p1") 
+
+
+# for (i in seq_along(os_df)){
+#   
+#   if(length(colnames(os_df[[i]])) > 0){
+#   colnames(os_df[[i]]) <- colnames
+#   } else{
+#     os_df[[i]]<-NULL
+#   }
+#   print(i)
+#   }
+
+
+os_sens_df<-do.call("rbind", os_df)
+
+os_sens_df$c1<-gsub('[[:punct:] ]+',' ',os_sens_df$c1)
+
+os_sens_df$c1<-str_trim(os_sens_df$c1)
+
+
+os_sens_df$date<-as.Date(os_sens_df$timestamp)
+
+os_sens_df$time<-format(os_sens_df$timestamp, "%H:%M:%S")
+
+
+
+
+#write.csv(os_sens_df, "all_sensors_os_records_May_2019.csv", row.names = FALSE)
+
+```
+
+
+```{r, eval=FALSE, echo = FALSE}
+
+os_sens_df<-vroom::vroom("all_sensors_os_records_May_2019.csv")
+ce_sensors<-vroom::vroom("all_ce_tools_dump_2019_09_02a.csv")
+
+ce_sensors<-ce_sensors %>% 
+              dplyr::select(sensor_no, datetime, call_time,prob_bat, species_class, prob_sp,date, time)
+
+colnames(ce_sensors)<-colnames(os_sens_df)
+#ce_sensors$sensor_id<- gsub("[^0-9.]", "", ce_sensors$sensor_id)
+
+all_calls_df<-rbind(ce_sensors, os_sens_df)
+
+sensor_info<-read.csv("sensor_info.csv")
+sensor_info$sensor_id<-gsub("\\..*","",sensor_info$deployment_id)
+
+all_sens_info<-merge(all_calls_df, sensor_info, by = "sensor_id")
+
+
+#write.csv(all_sens_info, "all_sensors_info_records_2019_10_25.csv", row.names = FALSE)
+
+```
+
+
+
+Adding deployment information column
+
+```{r, echo = FALSE,eval = FALSE}
+all_sens_info<-vroom::vroom("all_sensors_info_records_2019_10_25.csv")
+
+all_sens_info$deployment<-1
+
+all_sens_info[as.Date(as.character(all_sens_info$date)) > as.Date(as.character("2018-05-14")) & all_sens_info$sensor_id == 4,]<-all_sens_info %>%
+  filter(as.Date(as.character(date)) > as.Date("2018-05-14") & sensor_id == 4)%>%
+  mutate(deployment=replace(deployment, deployment==1, 2), Lat = replace(Lat, Lat==51.5367, 51.536553), Lon = replace(Lon, Lon==-0.0128, -0.013169))
+
+all_sens_info[as.Date(as.character(all_sens_info$date)) > as.Date("2018-08-07") & all_sens_info$sensor_id == 5,]<-all_sens_info %>%
+  filter(as.Date(as.character(date)) > as.Date("2018-08-07") & sensor_id == 5)%>%
+  mutate(deployment=replace(deployment, deployment==1, 2), Lat = replace(Lat, Lat==51.5362, 51.590616), Lon = replace(Lon, Lon==-0.0127, -0.0139243), Habitat = replace(Habitat, Habitat == "Grassland", "Duncan's Garden" ))
+
+
+all_sens_info$deployment_id<-paste(all_sens_info$sensor_id, all_sens_info$deployment, sep = ".")
+
+```
+
+```{r, echo = FALSE,eval = FALSE}
+all_sens_info$month<-months.Date(as.Date(all_sens_info$date))
+
+all_sens_info$month<-factor(all_sens_info$month, levels = month.name)
+
+all_sens_info$timestamp<-as.POSIXct(all_sens_info$timestamp)
+
+t <- strftime(all_sens_info$timestamp, format="%H:%M:%S")
+
+all_sens_info$time<-as.POSIXct(t, format="%H:%M:%S")
+
+all_sens_info<-all_sens_info[complete.cases(all_sens_info),]
+
+all_sens_info$Habitat<-as.character(all_sens_info$Habitat)
+
+all_sens_info$date_ch<-as.character(all_sens_info$date)
+
+all_sens_info$c1<-as.character(all_sens_info$c1)
+
+all_sens_info$month_ch<-all_sens_info$month
+
+all_sens_info<-all_sens_info %>%
+  group_by(sensor_id,c1, date)%>%
+  mutate(count_sp = n())%>%
+  ungroup()
+
+all_sens_info<-all_sens_info %>%
+   mutate(c1 = replace(c1, c1 == "yctalus leisleri", "Nyctalus leisleri"))%>%
+   mutate(c1 = replace(c1, c1 == "yctalus noctula", "Nyctalus noctula"))%>%
+   mutate(c1 = replace(c1, c1 == "ipistrellus nathusii", "Pipistrellus nathusii"))%>%
+   mutate(c1 = replace(c1, c1 == "ipistrellus pipistrellus", "Pipistrellus pipistrellus")) %>% 
+   mutate(c1 = replace(c1, c1 == "ipistrellus pygmaeus", "Pipistrellus pygmaeus")) %>% 
+   mutate(c1 = replace(c1, c1 == "lecotus auritus", "Plecotus auritus")) %>% 
+   mutate(c1 = replace(c1, c1 == "lecotus austriacus", "Plecotus austriacus")) %>% 
+   mutate(c1 = replace(c1, c1 == "yotis brandtii", "Myotis brandtii")) %>% 
+   mutate(c1 = replace(c1, c1 == "yotis daubentonii", "Myotis daubentonii")) %>% 
+   mutate(c1 = replace(c1, c1 == "yotis nattereri", "Myotis nattereri"))
+
+all_sens_info<-all_sens_info %>%
+  group_by(date_ch)%>%
+  mutate(count_date = n())%>%
+  ungroup()
+
+all_sens_info<-all_sens_info %>%
+  mutate(hour_rnd = round_date(timestamp, unit = "hour"), hour_u = hour(timestamp))%>%
+  group_by(hour_rnd, deployment_id)%>%
+  mutate(count_hour_dep_rnd = n()) %>%    #call count per rounded hour per deployment
+  ungroup()
+
+
+
+#vroom_write(all_sens_info, "all_sensors_all_callsb.csv", delim = ",")
+
+```
+
+####Figure 5: Distribution of total daily calls for each month 
+
+```{r,eval = FALSE}
+all_sens_info<-vroom("all_sensors_all_callsb.csv")
+
+hourly_sum<-all_sens_info %>% 
+  select(sensor_id, deployment_id, Lat, Lon, date, hour_rnd, count_hour_dep_rnd) %>% 
+  distinct()
+
+start<-min(all_sens_info$hour_rnd)
+end<-max(all_sens_info$hour_rnd)
+
+hourly_seq<-seq(start, end, by = "hour")
+#names(hourly_seq)<-c("hour_rnd")
+
+sensors<-unique(select(all_sens_info, c("sensor_id", "deployment_id", "Lat", "Lon")))
+
+hourly_sens_seq<-rep(hourly_seq, times = length(sensors$deployment_id))
+deployment_sens_seq<-rep(sensors$deployment_id, each = length(hourly_seq))
+
+df_seq<-data.frame(hourly_sens_seq, deployment_sens_seq)
+colnames(df_seq)<-c("hour_rnd", "deployment_id")
+
+rnd_seq<-merge(df_seq,hourly_sum, by = c("hour_rnd","deployment_id"), all = TRUE)
+
+rnd_df<-rnd_seq %>% 
+  group_by(deployment_id) %>%
+  arrange(sensor_id) %>% 
+  tidyr::fill(sensor_id, Lat, Lon) %>% 
+  ungroup() %>% 
+  mutate(date = date(hour_rnd))
+ 
+
+#write.csv(rnd_df, "hourly_counts_all_sensors.csv", row.names = FALSE)
+  
+```
+
+Weather data
+
+
+```{r, eval = FALSE}
+files<-list.files(here::here("/data_archive/weather_data/pws2017timberhourly"), full.names = TRUE, pattern = "*.json")
+
+files<-files[grepl("/20", files)]
+
+
+json2df<-function(json){
+
+  # Give the input file name to the function.
+  if(!is.null(count.fields(json))){
+    result <- fromJSON(txt = json)
+    
+    # Convert JSON file to a data frame.
+    json_data_frame <- as.data.frame(result)
+    json_data_frame <- data.frame(json_data_frame[,-15],json_data_frame$observations.metric)
+    
+    print(json)
+    return(json_data_frame)    
+  }
+  
+}
+
+json_out<-lapply(files, json2df) # 25th may 2017 empty file need a catch for that
+
+json_df<-do.call("rbind", json_out)
+```
+
+
+```{r, eval = FALSE}
+json_df$observations.obsTimeUtc<- as.POSIXct(json_df$observations.obsTimeUtc, format = "%Y-%m-%dT%H:%M:%SZ", tz = "UTC")
+attr(json_df$observations.obsTimeUtc, "tzone") <- "UTC" 
+json_df$date<-date(json_df$observations.obsTimeUtc)
+
+json_df$precipRate[is.na(json_df$precipRate)]<-0
+
+daily_climate_data<-json_df%>%
+  group_by(date)%>%
+  summarize(mean_temp = mean(tempAvg), 
+            mean_humid = mean(observations.humidityAvg), 
+            mean_wind = mean(windspeedAvg), 
+            mean_wind_gust = mean(windgustAvg),
+            precip_total = sum(precipRate))
+
+#write.csv(daily_climate_data, "QEOP_daily_climate_data_2019_10_28.csv", row.names = FALSE)
+```
+
+
+```{r, eval = FALSE}
+hourly_climate_data<-json_df
+hourly_climate_data$round_time<-round_date(as.POSIXct(hourly_climate_data$observations.obsTimeUtc, format = "%Y-%m-%d %H:%M:%S"), unit = "hour")
+
+all_hours<-data.frame(seq(min(hourly_climate_data$round_time), max(hourly_climate_data$round_time), by = "hour"))
+colnames(all_hours)<-"round_time"
+
+hourly_climate_data<-hourly_climate_data%>%
+  group_by(round_time)%>%
+  summarize(mean_temp = mean(tempAvg), 
+            mean_humid = mean(observations.humidityAvg), 
+            mean_wind = mean(windspeedAvg), 
+            mean_wind_gust = mean(windgustAvg),
+            precip_total = sum(precipRate))
+
+all_hours_c_data<-merge(all_hours, hourly_climate_data, by = "round_time", all = TRUE)
+
+all_hours_c_data<-all_hours_c_data[complete.cases(all_hours_c_data),]
+
+hourly_df_clim<-merge(rnd_df, all_hours_c_data, by.x = "hour_rnd", by.y = "round_time")
+
+
+#write.csv(hourly_climate_data, "QEOP_hourly_climate_data_2019_10_28.csv", row.names = FALSE)
+
+#write.csv(hourly_df_clim, "hourly_calls_and_climate_data_2019_10_28.csv", row.names = FALSE)
+
+```
+
+```{r, eval = FALSE}
+
+hourly_df_clim<-read.csv("hourly_calls_and_climate_data_2019_10_28.csv")
+
+break_finder<-function(x){
+  nl_out<-rep(x, each = x)
+  }
+
+all_sensors_df<-NULL
+
+for (id in unique(hourly_df_clim$deployment_id)){
+
+  test<-hourly_df_clim[hourly_df_clim$deployment_id == id, ]
+  test<-arrange(test, hour_rnd)
+  rl<-rle(is.na(test$count))  
+  bf_out<-sapply(rl$lengths, break_finder)
+  test_na_run<-unlist(bf_out)
+  test_na_run[!is.na(test$count)]<-NA
+  test$hours_inactive<-test_na_run
+  all_sensors_df<-rbind(all_sensors_df,test)
+  print(id)
+  
+  }
+
+all_sensors_df$inactive<-all_sensors_df$days_inactive
+
+all_sensors_df$inactive_week[all_sensors_df$hours_inactive < (7*24) | is.na(all_sensors_df$hours_inactive)]<-NA
+
+all_sensors_df$inactive_week[all_sensors_df$hours_inactive >= (7*24)]<-1
+
+all_sensors_df$count_hour_dep_rnd[is.na(all_sensors_df$count_hour_dep_rnd)]<-0
+
+all_sensors_df$count_hour_dep_rnd[which(all_sensors_df$inactive_week == 1)]<-NA
+
+```
+
+```{r}
+
+all_sensors_df$active_week<-ifelse(is.na(all_sensors_df$inactive_week), 1, 0)
+all_sensors_df$date<-as.Date(all_sensors_df$date)
+all_sensors_df$hour_rnd<-as.POSIXct(all_sensors_df$hour_rnd, format = "%Y-%m-%d %H:%M:%S")
+all_sensors_df$deployment_id<-as.factor(all_sensors_df$deployment_id)
+all_sensors_df$month<-lubridate::month(all_sensors_df$hour_rnd, label = TRUE, abbr = TRUE)
+all_sensors_df$hours_inactive[is.na(all_sensors_df$hours_inactive)]<-0
+all_sensors_df$inactive_week[is.na(all_sensors_df$inactive_week)]<-0
+
+all_sensors_df<-all_sensors_df[!is.na(all_sensors_df$hour_rnd),]  #some NAs have snuck in - not sure where from...
+
+all_sensors_df$inactive_week[all_sensors_df$inactive_week == 0] <- NA
+
+all_sensors_df<-all_sensors_df %>% 
+  group_by(hour_rnd) %>%
+  mutate(sum_active = sum(active_week),  count_ef = count_hour_dep_rnd/sum_active) %>% 
+  distinct() %>% 
+  ungroup()
+
+
+write.csv(all_sensors_df, "all_sensors_df.csv", row.names = FALSE)
+
+```
+
+
+```{r}
+
+year_plot<-ggplot(all_sensors_df, aes(x = month, y = count_hour_dep_rnd))+
+  geom_boxplot()+
+  #scale_y_continuous(trans = log10_trans(), breaks = trans_breaks("log10", function(x) 10^x), labels = trans_format("log10", math_format(10^.x)))+
+  labs(x = "Month", y = "Hourly Detected Calls")+
+  scale_x_discrete(labels=month.abb) +
+  theme_bw()+
+  theme(axis.text.y = element_text(lineheight = 0.5 , size = 18),
+        axis.text.x = element_text(size = 18, angle= 45, hjust = 1),
+        axis.title.x = element_text(size = 20),
+        axis.title.y = element_text(size = 20))
+
+
+#png("Annual_Calls_wide.png", width = 10, height = 8, units = 'in', res = 300)
+year_plot# Make plot
+#dev.off()
+
+
+```
+
+
+```{r}
+
+year_effort_plot<-ggplot(all_sensors_df, aes(x = month, y = count_ef))+
+  geom_boxplot()+
+  #scale_y_continuous(trans = log10_trans(), breaks = trans_breaks("log10", function(x) 10^x), labels = trans_format("log10", math_format(10^.x)))+
+  labs(x = "Month", y = "Hourly Detected Calls")+
+  scale_x_discrete(labels=month.abb) +
+  theme_bw()+
+  theme(axis.text.y = element_text(lineheight = 0.5 , size = 18),
+        axis.text.x = element_text(size = 18, angle= 45, hjust = 1),
+        axis.title.x = element_text(size = 20),
+        axis.title.y = element_text(size = 20))
+
+
+#png("Annual_Calls_wide.png", width = 10, height = 8, units = 'in', res = 300)
+year_effort_plot# Make plot
+#dev.off()
+
+
+```
+
+
+```{r}
+
+ggplot(all_sensors_df, aes(x = hour_rnd, y = deployment_id, group = deployment_id))+
+  geom_line(color = "red", aes(x = hour_rnd, y = deployment_id,size = log10(inactive_week)), alpha = 0.5)+
+  geom_line(color = "steelblue",aes(size = log10(count_ef)))+
+    #scale_y_reverse(breaks = seq(1, 16, by = 1))+
+  scale_y_discrete(limits = c("15.1", "14.1", "13.1","12.1", "11.1","10.1", "9.1", "8.1","7.1","6.1","5.2","5.1","4.2","4.1","3.1","2.1","1.1"))+
+  #scale_x_date(date_breaks = "1 month", date_labels = "%m-%Y")+
+  theme_bw()+
+  #theme(panel.background = element_blank())+
+  theme(axis.text.y = element_text(lineheight = 0.5 , size = 18),
+        axis.text.x = element_text(size = 14, angle= 45, hjust = 1),
+        axis.title.x = element_text(size = 20),
+        axis.title.y = element_text(size = 20),
+        legend.text=element_text(size=18),
+        legend.title=element_text(size=20))+
+  labs(x = "Date", y = "Deployment", linetype = "test")+
+  #scale_fill_continuous(breaks = c(0,1,2,3,4), labels = c("1","10", "100","1000","10000"), guide =guide_legend(title ="Detections\n(Log10)"))
+  scale_size_continuous(breaks = c(0,1,2,3,4),labels = c("1","10","100", "1000", "10000"))+
+  guides(size = guide_legend(title ="Detections"))
+
+
+```
+
+Event Data
+
+```{r}
+all_sensors_df <- vroom::vroom("all_sensors_df.csv")
+online<-vroom::vroom(here::here("Event_Data/attendances.csv"))
+park<-read.csv(here::here("Event_Data/qeop_events_list_from_0101192.csv"), stringsAsFactors = FALSE) #removing events where attendance = 0 as these seem to be very low key e.g. filming/photography events in the park
+
+park <- park %>% 
+  dplyr::mutate(In = as.POSIXct(In, format = "%d/%m/%y %H:%M"), Out = as.POSIXct(Out, format = "%d/%m/%y %H:%M")) %>%   
+  dplyr::filter(Attendance != "0")
+
+online <- online %>% 
+  filter(event_type != "Tour")
+
+online$date <- as.Date(online$date, format = "%d/%m/%Y")
+
+dates <- data.frame(date = unique(all_sensors_df$date))
+all_online<- merge(online, dates, all = TRUE, by = "date")
+all_online$event_bin <- ifelse(is.na(all_online$event_type),0,1)
+
+all_sensors_df <- merge(all_sensors_df, all_online[, c("date","attendance", "event_bin")], by = "date")
+  
+```
+
+
+
+###Sorting the data out
+```{r}
+
+#dir <- here::here("model_output/")
+
+dir <- here::here("model_output_filtered_evening")
+
+if (!dir.exists(dir)){
+  dir.create(dir)
+}
+
+all_sensors_df$month_num<-as.numeric(all_sensors_df$month)
+
+
+all_sensors_df$inactive_week[is.na(all_sensors_df$inactive_week)]<-0
+
+all_sensors_df$event_bin <- as.factor(all_sensors_df$event_bin)
+
+all_sensors_df <- all_sensors_df %>% 
+  dplyr::select(date, hour_rnd, deployment_id, Lat, Lon, count_hour_dep_rnd, mean_temp, mean_humid, mean_wind, mean_wind_gust, precip_total, hours_inactive, inactive_week, month, sum_active, event_bin)
+  
+all_sensors_df_cc<-all_sensors_df[complete.cases(all_sensors_df),]
+
+
+```
+
+###Sorting the data out - filtering out data to exclude calls one hour before dusk and one hour after sunrise
+```{r}
+
+suns<-getSunlightTimes(date = as.Date(all_sensors_df_cc$hour_rnd),lat = 51.543523, lon = -0.016214 ,keep = c("sunrise","sunset"), tz = "UTC")
+
+suns<-unique(suns)
+
+all_sensors_df_cc <- merge(all_sensors_df_cc, suns, by = "date")
+
+all_sensors_df_cc$sunrise_lim <- all_sensors_df_cc$sunrise + (1*60*60)
+all_sensors_df_cc$sunset_lim <- all_sensors_df_cc$sunset - (1*60*60)
+
+all_sensors_df_cc$deployment_id <- as.factor(all_sensors_df_cc$deployment_id)
+
+all_sensors_df_cc <- all_sensors_df_cc %>% 
+  filter(hour_rnd <= sunrise_lim | hour_rnd >= sunset_lim) %>% 
+  filter(deployment_id != "1.1" & deployment_id != "6.1" & deployment_id != "11.1") %>% #high rates of false positives
+  filter(deployment_id != "3.1" & deployment_id != "4.2" & deployment_id != "5.1"& deployment_id != "15.1")  #%>% #no record of false positive/false negative rates
+ #filter(deployment_id != "4.1") 
+```
+
+
+
+Looking at just the time around dusk
+```{r}
+
+peak_df <- all_sensors_df_cc %>% 
+  filter(hour_rnd >= sunset & hour_rnd <= sunset+(2*60*60)) %>% 
+  group_by(date, deployment_id) %>% 
+  mutate(total_eve_count = sum(count_hour_dep_rnd), mean_eve_temp= mean(mean_temp), mean_eve_wind = mean(mean_wind), total_eve_precip = sum(precip_total)) %>% 
+  dplyr::select(date, month,deployment_id, total_eve_count, mean_eve_temp, mean_eve_wind, total_eve_precip, event_bin) %>%   distinct()
+
+
+```
+
+###Fitting Models - Poisson
+
+```{r}
+
+fit_zipoisson <- glmmTMB(total_eve_count ~ mean_eve_temp+ 
+                              mean_eve_wind + total_eve_precip+ 
+                              event_bin + (1|deployment_id),   
+                              data = peak_df,
+                              ziformula = ~1,
+                              dispformula = ~1,
+                              family = poisson)
+
+saveRDS(fit_zipoisson, paste0(dir,"/zi_poisson.RDA"))
+
+fit_zipoisson <- readRDS(paste0(dir,"/zi_poisson.RDA"))
+
+simulationOutput_pois <- simulateResiduals(fittedModel = fit_zipoisson, n = 250)
+
+plot(simulationOutput_pois)
+
+testResiduals(simulationOutput_pois)
+
+testZeroInflation(simulationOutput_pois)
+
+testDispersion(simulationOutput_pois)
+
+```
+
+###Fitting Models - Hurdle Model 1
+```{r}
+fit_hnbinom1 <-  glmmTMB(total_eve_count ~ mean_eve_temp+ 
+                              mean_eve_wind + total_eve_precip+ 
+                              event_bin + (1|deployment_id),   
+                              data = peak_df,
+                              ziformula = ~1,
+                              dispformula = ~1,
+                             family=truncated_nbinom1)
+
+saveRDS(fit_hnbinom1, paste0(dir,"/zin_hnbinom1.RDA"))
+
+fit_hnbinom1 <- readRDS(paste0(dir,"/zin_hnbinom1.RDA"))
+
+simulationOutput_hurd1 <- simulateResiduals(fittedModel = fit_hnbinom1, n = 250)
+
+plot(simulationOutput_hurd1)
+
+testResiduals(simulationOutput_hurd1)
+
+testZeroInflation(simulationOutput_hurd1)
+
+testDispersion(simulationOutput_hurd1)
+
+```
+
+###Fitting Models - Hurdle Model 2
+```{r}
+fit_hnbinom2 <- glmmTMB(total_eve_count ~ mean_eve_temp+ 
+                              mean_eve_wind + total_eve_precip+ 
+                              event_bin + (1|deployment_id),   
+                              data = peak_df,
+                              ziformula = ~1,
+                              dispformula = ~1,
+                             family=truncated_nbinom2)
+
+saveRDS(fit_hnbinom2, paste0(dir,"/zin_hnbinom2.RDA"))
+
+fit_hnbinom2 <- readRDS(paste0(dir,"/zin_hnbinom2.RDA"))
+
+simulationOutput_hurd2 <- simulateResiduals(fittedModel = fit_hnbinom2, n = 250)
+
+
+plot(simulationOutput_hurd2)
+
+testResiduals(simulationOutput_hurd2)
+
+testZeroInflation(simulationOutput_hurd2)
+
+testDispersion(simulationOutput_hurd2)
+
+```
+
+
+###Fitting Models - Negative binomial 1
+```{r}
+
+fit_zinbinom1 <- glmmTMB(total_eve_count ~ mean_eve_temp+ 
+                              mean_eve_wind + total_eve_precip+ 
+                              event_bin + (1|deployment_id),   
+                              data = peak_df,
+                              ziformula = ~1,
+                              dispformula = ~1,
+                             family=nbinom1)
+
+saveRDS(fit_zinbinom1, paste0(dir,"/zin_binom1.RDA"))
+
+fit_zinbinom1 <- readRDS(paste0(dir,"/zin_binom1.RDA"))
+
+
+simulationOutput_zbin1 <- simulateResiduals(fittedModel = fit_zinbinom1, n = 250)
+
+testZeroInflation(simulationOutput_zbin1)
+
+testDispersion(simulationOutput_zbin1)
+
+testResiduals(simulationOutput_zbin1)
+
+plotResiduals(peak_df$mean_eve_temp, simulationOutput_zbin1$scaledResiduals,quantreg = T)
+
+plotResiduals(peak_df$event_bin, simulationOutput_zbin1$scaledResiduals,quantreg = T)
+
+```
+
+###Fitting Models - Negative binomial 2
+```{r}
+
+fit_zinbinom2 <- glmmTMB(total_eve_count ~ mean_eve_temp+ 
+                              mean_eve_wind + total_eve_precip+ 
+                              event_bin + (1|deployment_id),   
+                              data = peak_df,
+                              ziformula = ~1,
+                              dispformula = ~1,
+                             family=nbinom2)
+
+saveRDS(fit_zinbinom2, paste0(dir,"/zin_binom2.RDA"))
+
+fit_zinbinom2 <- readRDS(paste0(dir,"/zin_binom2.RDA"))
+
+simulationOutput_zbin2 <- simulateResiduals(fittedModel = fit_zinbinom2)
+
+testZeroInflation(simulationOutput_zbin2)
+testDispersion(simulationOutput_zbin2)
+
+plotResiduals(peak_df$mean_eve_temp, simulationOutput_zbin2$scaledResiduals,quantreg = T)
+
+
+``` 
+
+###Comparing models before digging deeper into model fit
+
+```{r}
+#AICtab(fit_zipoisson, fit_hnbinom1, fit_hnbinom2, fit_zinbinom1, fit_zinbinom2)
+
+AICtab(fit_zipoisson, fit_zinbinom1, fit_zinbinom2)
+```
+###Fitting Models - Negative binomial 1 with deployment as var in dispformula
+
+```{r}
+
+fit_zinbinom1_dep <- glmmTMB(total_eve_count ~ mean_eve_temp+ 
+                              mean_eve_wind + total_eve_precip+ 
+                              event_bin + (1|deployment_id),   
+                              data = peak_df,
+                              ziformula = ~1,
+                             dispformula=~deployment_id,
+                             family=nbinom1)
+
+saveRDS(fit_zinbinom1_dep, paste0(dir,"/zin_binom1_dep.RDA"))
+
+fit_zinbinom1_dep <- readRDS(paste0(dir,"/zin_binom1_dep.RDA"))
+
+
+simulationOutput_zbin1_dep <- simulateResiduals(fittedModel = fit_zinbinom1_dep, n = 250)
+
+#plot(simulationOutput_zbin1)
+
+testZeroInflation(simulationOutput_zbin1_dep)
+
+testDispersion(simulationOutput_zbin1_dep)
+
+testResiduals(simulationOutput_zbin1_dep)
+
+plotResiduals(peak_df$mean_eve_temp, simulationOutput_zbin1_dep$scaledResiduals,quantreg = T)
+```
+
+###Fitting Models - Negative binomial 1 with month as var in dispformula
+```{r}
+
+fit_zinbinom1_mon <- glmmTMB(total_eve_count ~ mean_eve_temp+ 
+                              mean_eve_wind + total_eve_precip+ 
+                              event_bin + (1|deployment_id),   
+                              data = peak_df,
+                              ziformula = ~1,
+                             dispformula=~month,
+                             family=nbinom1)
+
+saveRDS(fit_zinbinom1_mon, paste0(dir,"/zin_binom1_mon.RDA"))
+
+fit_zinbinom1_mon <- readRDS(paste0(dir,"/zin_binom1_mon.RDA"))
+
+
+simulationOutput_zbin1_mon <- simulateResiduals(fittedModel = fit_zinbinom1_mon, n = 250)
+
+#plot(simulationOutput_zbin1)
+
+testZeroInflation(simulationOutput_zbin1_mon)
+
+testDispersion(simulationOutput_zbin1_mon)
+
+testResiduals(simulationOutput_zbin1_mon)
+
+plotResiduals(peak_df$mean_eve_temp, simulationOutput_zbin1_mon$scaledResiduals,quantreg = T)
+
+plotResiduals(peak_df$event_bin, simulationOutput_zbin1_mon$scaledResiduals,quantreg = T)
+
+
+```
+
+###Fitting Models - Negative binomial 1 with deployment and month as vars in dispformula
+```{r}
+
+fit_zinbinom1_dep_mon <- glmmTMB(total_eve_count ~ mean_eve_temp+ 
+                              mean_eve_wind + total_eve_precip+ 
+                              event_bin + (1|deployment_id),   
+                              data = peak_df,
+                              ziformula = ~1,
+                             dispformula = ~ month + deployment_id,
+                             family = nbinom1)
+
+saveRDS(fit_zinbinom1_dep_mon, paste0(dir,"/zin_binom1_dep_mon.RDA"))
+
+fit_zinbinom1_dep_mon <- readRDS(paste0(dir,"/zin_binom1_dep_mon.RDA"))
+
+
+simulationOutput_zbin1_dep_mon <- simulateResiduals(fittedModel = fit_zinbinom1_dep_mon, n = 250)
+
+#plot(simulationOutput_zbin1)
+
+testZeroInflation(simulationOutput_zbin1_dep_mon)
+
+testDispersion(simulationOutput_zbin1_dep_mon)
+
+testResiduals(simulationOutput_zbin1_dep_mon)
+
+```
+
+###Fitting Models - Negative binomial 1 with deployment and month as vars in dispformula and ziformula
+
+```{r}
+
+fit_zinbinom1_dep_mon_both <- glmmTMB(total_eve_count ~ mean_eve_temp+ 
+                              mean_eve_wind + total_eve_precip+ 
+                              event_bin + (1|deployment_id),   
+                              data = peak_df,
+                             ziformula = ~ month + deployment_id,
+                             dispformula = ~ month + deployment_id,
+                             family = nbinom1)
+
+saveRDS(fit_zinbinom1_dep_mon_both, paste0(dir,"/zin_binom1_dep_mon_both.RDA"))
+
+fit_zinbinom1_dep_mon_both <- readRDS(paste0(dir,"/zin_binom1_dep_mon_both.RDA"))
+
+
+simulationOutput_zbin1_dep_mon_both <- simulateResiduals(fittedModel = fit_zinbinom1_dep_mon_both, n = 250)
+
+#plot(simulationOutput_zbin1)
+
+testZeroInflation(simulationOutput_zbin1_dep_mon_both)
+
+testDispersion(simulationOutput_zbin1_dep_mon_both)
+
+testResiduals(simulationOutput_zbin1_dep_mon_both)
+
+```
+
+###Fitting Models - Negative binomial 2 with deployment as var in dispformula
+```{r}
+
+fit_zinbinom2_disp <- glmmTMB(total_eve_count ~ mean_eve_temp+ 
+                              mean_eve_wind + total_eve_precip+ 
+                              event_bin + (1|deployment_id),   
+                              data = peak_df, 
+                             ziformula=~1,
+                             dispformula = ~deployment_id,
+                             family=nbinom2)
+
+saveRDS(fit_zinbinom2_disp, paste0(dir,"/zin_binom2_disp.RDA"))
+
+fit_zinbinom2_disp <- readRDS(paste0(dir,"/zin_binom2_disp.RDA"))
+
+simulationOutput_zbin2_disp <- simulateResiduals(fittedModel = fit_zinbinom2_disp, n = 250)
+
+testZeroInflation(simulationOutput_zbin2_disp)
+testDispersion(simulationOutput_zbin2_disp)
+
+plotResiduals(peak_df$mean_eve_temp, simulationOutput_zbin2_disp$scaledResiduals,quantreg = T)
+```
+
+
+```{r}
+
+fit_zinbinom2_mon <- glmmTMB(total_eve_count ~ mean_eve_temp+ 
+                              mean_eve_wind + total_eve_precip+ 
+                              event_bin + (1|deployment_id),   
+                              data = peak_df,  
+                             ziformula=~1,
+                             dispformula = ~deployment_id+month,
+                             family=nbinom2)
+
+
+saveRDS(fit_zinbinom2_mon, paste0(dir,"/zin_binom2_mon.RDA"))
+
+fit_zinbinom2_mon <- readRDS(paste0(dir,"/zin_binom2_mon.RDA"))
+
+
+simulationOutput_zbin2_mon <- simulateResiduals(fittedModel = fit_zinbinom2_mon, n = 250)
+
+testZeroInflation(simulationOutput_zbin2_mon)
+
+testDispersion(simulationOutput_zbin2_mon)
+
+plotResiduals(peak_df$mean_eve_temp, simulationOutput_zbin2_mon$scaledResiduals,quantreg = T)
+```
+
+###Fitting Models - Negative binomial 2 with deployment and month as vars in dispformula
+```{r}
+
+fit_zinbinom2_disp_mon <- glmmTMB(total_eve_count ~ mean_eve_temp+ 
+                              mean_eve_wind + total_eve_precip+ 
+                              event_bin + (1|deployment_id),   
+                              data = peak_df,   
+                             ziformula=~1,
+                             dispformula = ~deployment_id+month,
+                             family=nbinom2)
+
+
+saveRDS(fit_zinbinom2_disp_mon, paste0(dir,"/zin_binom2_disp_mon.RDA"))
+
+fit_zinbinom2_disp_mon <- readRDS(paste0(dir,"/zin_binom2_disp_mon.RDA"))
+
+
+simulationOutput_zbin2_disp_mon <- simulateResiduals(fittedModel = fit_zinbinom2_disp_mon, n = 250)
+
+testZeroInflation(simulationOutput_zbin2_disp_mon)
+testDispersion(simulationOutput_zbin2_disp_mon)
+
+plotResiduals(peak_df$mean_eve_temp, simulationOutput_zbin2_disp_mon$scaledResiduals,quantreg = T)
+
+plotResiduals(peak_df$event_bin, simulationOutput_zbin2_disp_mon$scaledResiduals,quantreg = T)
+``` 
+
+###Fitting Models - Negative binomial 2 with deployment and month as vars in both dispformula and ziformula
+```{r}
+
+fit_zinbinom2_disp_mon_both <- glmmTMB(total_eve_count ~ mean_eve_temp+ 
+                              mean_eve_wind + total_eve_precip+ 
+                              event_bin + (1|deployment_id),   
+                              data = peak_df,      
+                             ziformula=~deployment_id+month,
+                             dispformula = ~deployment_id+month,
+                             family=nbinom2)
+
+
+saveRDS(fit_zinbinom2_disp_mon_both, paste0(dir,"/zin_binom2_disp_mon_both.RDA"))
+
+fit_zinbinom2_disp_mon_both <- readRDS(paste0(dir,"/zin_binom2_disp_mon_both.RDA"))
+
+
+simulationOutput_zbin2_disp_mon_both <- simulateResiduals(fittedModel = fit_zinbinom2_disp_mon_both, n = 250)
+
+testZeroInflation(simulationOutput_zbin2_disp_mon_both)
+testDispersion(simulationOutput_zbin2_disp_mon_both)
+
+plotResiduals(peak_df$mean_eve_temp, simulationOutput_zbin2_disp_mon_both$scaledResiduals,quantreg = T)
+
+plotResiduals(peak_df$event_bin, simulationOutput_zbin2_disp_mon_both$scaledResiduals,quantreg = T)
+``` 
+
+
+```{r}
+
+
+AICtab(fit_zinbinom1_dep_mon, fit_zinbinom1, fit_zinbinom1_dep, fit_zinbinom1_mon, fit_zinbinom1_dep_mon_both, fit_zinbinom2, fit_zinbinom2_disp,fit_zinbinom2_mon, fit_zinbinom2_disp_mon, fit_zinbinom2_disp_mon_both)
+
+plotResiduals(peak_df$mean_eve_temp,simulationOutput_zbin2_disp_mon_both$scaledResiduals,quantreg = T)
+
+plotResiduals(peak_df$mean_eve_temp,simulationOutput_zbin2_mon$scaledResiduals,quantreg = T)
+
+plotResiduals(peak_df$event_bin,simulationOutput_zbin2_mon$scaledResiduals,quantreg = T)
+
+# mlist <- list(fit_zinbinom1_dep_mon, fit_zinbinom1, fit_zinbinom1_dep, fit_zinbinom1_mon, fit_zinbinom1_dep_mon_both, fit_zinbinom2, fit_zinbinom2_disp,fit_zinbinom2_mon, fit_zinbinom2_disp_mon, fit_zinbinom2_disp_mon_both )
+
+
+```
+
+```{r}
+library(plyr)
+
+model = fit_zinbinom2
+
+sims=simulate(model, seed = 1, nsim = 1000)
+
+simdatlist=lapply(sims, function(count){
+  cbind(count, peak_df[,c('mean_eve_temp', 'mean_eve_wind', 'total_eve_precip', 'event_bin', 'deployment_id', 'month')])
+})
+
+simdatsums=lapply(simdatlist, function(x){
+  ddply(x, ~deployment_id+event_bin, summarize,
+  mean_count=mean(count))
+})
+
+ssd=do.call(rbind, simdatsums)
+
+
+real = ddply(peak_df, ~deployment_id+event_bin, summarize,
+ mean_count=mean(total_eve_count))
+
+
+ggplot(ssd, aes(x = mean_count, color = event_bin)) +
+  geom_density(adjust = 10) +
+  facet_wrap( ~ deployment_id) +
+  geom_point(data = real,
+             aes(x = mean_count, y = 0.0025, color = event_bin),
+             size = 2) + ylim(0, 0.01)+ xlim(0,500)+
+  xlab("Predicted average hourly bat calls") + ylab(NULL)
+
+
+```
+
+```{r}
+
+# model = fit_zinbinom2
+# 
+# # 
+# fit_zinbinom1_monde <- glmmTMB(avg_eve_count ~ mean_eve_temp+ 
+#                               mean_eve_wind + total_eve_precip+ 
+#                               event_bin + (1|deployment_id) + 
+#                               (1|month),data = peak_df,  
+#                              ziformula= ~1,
+#                              dispformula = ~1,
+#                              family=nbinom1)
+
+model = fit_zinbinom1
+
+peak_df$month_f <- factor(peak_df$month, levels=c('Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'))
+
+peak_df$bats_active_month <- NULL
+
+peak_df$bats_active_month <- ifelse( peak_df$month == "May" | peak_df$month == "Jun" | peak_df$month == "Jul" | peak_df$month == "Aug" | peak_df$month == "Sep" | peak_df$month == "Oct", "awake", "hibernating")
+
+sims=simulate(model, seed = 1, nsim = 1000)
+
+simdatlist=lapply(sims, function(count){
+  cbind(count, peak_df[,c('mean_eve_temp', 'mean_eve_wind', 'total_eve_precip', 'event_bin', 'deployment_id', 'month', 'bats_active_month')])
+})
+
+simdatsums=lapply(simdatlist, function(x){
+  # ddply(x, ~event_bin+bats_active_month, summarize,
+  # mean_count=mean(count))
+ x %>% 
+  group_by(event_bin, bats_active_month) %>% 
+  mutate(mean_count_hib = mean(count)) %>% 
+  ungroup() %>% 
+  group_by(month, event_bin) %>% 
+  mutate(mean_count_month = mean(count)) %>% 
+    ungroup()
+
+  })
+
+ssd=do.call(rbind, simdatsums)
+
+
+real <- peak_df %>% 
+  # group_by(event_bin, bats_active_month) %>% 
+  # mutate(mean_count_hib = mean(ave_eve_count)) %>% 
+  # ungroup() %>% 
+  group_by(month, event_bin) %>% 
+  dplyr::mutate(mean_count_month = mean(total_eve_count)) %>% 
+  ungroup()
+
+
+ggplot(ssd, aes(x = mean_count_hib, color = event_bin)) +
+  geom_density(adjust = 10) +
+  facet_wrap(~ bats_active_month) +
+  geom_point(data = real,
+             aes(x = total_eve_count, y = 0.0045, color = event_bin),
+             size = 2) +
+  xlab("Predicted average hourly bat calls") + ylab(NULL)+xlim(0,400)
+
+
+
+
+ggplot(ssd[ssd$bats_active_month == "awake",], aes(x = mean_count_month, color = event_bin)) +
+  geom_density(adjust = 10) +
+  facet_wrap(~ month_f) +
+  geom_point(data = real[real$bats_active_month == "awake",],
+             aes(x = mean_count_month, y = 0.0045, color = event_bin),
+             size = 2) +
+  xlab("Predicted average hourly bat calls") + ylab(NULL)+xlim(0,400)
+
+
+```
+
+
+
+
+
+
+
+
+
+
+```{r}
+
+m1 <- glmmTMB(count_hour_dep_rnd ~ mean_temp+ 
+                             mean_wind + precip_total + 
+                             event_bin + (1|deployment_id),   
+                             data = all_sensors_df_cc,
+                             ziformula = ~ month + deployment_id,
+                             dispformula = ~ month + deployment_id,
+                             family = nbinom1)
+
+saveRDS(fit_zinbinom1_dep_mon_both, paste0(dir,"/zin_binom1_dep_mon_both.RDA"))
+
+fit_zinbinom1_dep_mon_both <- readRDS(paste0(dir,"/zin_binom1_dep_mon_both.RDA"))
+
+
+simulationOutput_zbin1_dep_mon_both <- simulateResiduals(fittedModel = fit_zinbinom1_dep_mon_both, n = 250)
+
+#plot(simulationOutput_zbin1)
+
+testZeroInflation(simulationOutput_zbin1_dep_mon_both)
+
+testDispersion(simulationOutput_zbin1_dep_mon_both)
+
+testResiduals(simulationOutput_zbin1_dep_mon_both)
+
+```
+
+
+```{r}
+fit_zinbinom2_mon_circ <- glmmTMB(count_hour_dep_rnd ~ mean_temp+ 
+                              mean_wind + precip_total + 
+                              sin(month_num/12 * pi) + 
+                              cos(month_num/12 * pi) +
+                             (1|deployment_id),   
+                             data = all_sensors_df,   
+                              ziformula=~1,
+                              family=nbinom2)
+
+saveRDS(fit_zinbinom2, paste0(dir,"/zin_binom2.RDA"))
+
+
+fit_hnbinom1 <- glmmTMB(count_hour_dep_rnd ~ mean_temp+ 
+                              mean_wind + precip_total + 
+                             (1|deployment_id),   
+                             data = all_sensors_df,
+                        ziformula=~1,
+                        family=truncated_nbinom1)
+
+saveRDS(fit_hnbinom1, paste0(dir,"/zin_hnbinom1.RDA"))
+
+
+##Doesn't converge
+
+fit_hnbinom2 <- glmmTMB(count_hour_dep_rnd ~ mean_temp+ 
+                              mean_wind + precip_total + 
+                             (1|deployment_id),   
+                             data = all_sensors_df,
+                        ziformula=~1,
+                        family=truncated_nbinom2)
+
+saveRDS(fit_hnbinom2, paste0(dir,"/zin_hnbinom2.RDA"))
+
+
+
+AICtab(fit_zipoisson,fit_zinbinom1, fit_zinbinom2, fit_hnbinom1, fit_hnbinom2)
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Distribution of daily calls over the year by species - some of the species names are spelt multiple ways, some wrong, some right.
+
+
+####Figure 6: Distribution of total daily calls for each month, by species.  
+
+```{r}
+ggplot(all_sens_info, aes(x = month_ch, y = count_sp))+
+  scale_y_continuous(trans = log10_trans(), breaks = trans_breaks("log10", function(x) 10^x), labels = trans_format("log10", math_format(10^.x)))+
+  labs(x = "Month", y = "Daily Detected Calls")+
+  geom_boxplot()+
+  facet_wrap(.~c1)+
+  scale_x_discrete(labels=month.abb) +
+  theme_bw()+
+  theme(axis.text.y = element_text(lineheight = 0.5 , size = 18),
+        axis.text.x = element_text(size = 14, angle= 45, hjust = 1),
+        axis.title.x = element_text(size = 20),
+        axis.title.y = element_text(size = 20))
+```
+
+
+####Figure 7: Distribution of total daily calls for each month, by genus.  
+
+```{r}
+
+all_sens_info$g1<-vapply(strsplit(as.character(all_sens_info$c1)," "), `[`, 1, FUN.VALUE=character(1))
+
+all_sens_info<-all_sens_info %>%
+  group_by(sensor_id,g1, date)%>%
+  mutate(count_gen = n())%>%
+  ungroup()
+
+genus_plot<-ggplot(all_sens_info, aes(x = month_ch, y = count_gen))+
+    scale_y_continuous(trans = log10_trans(), breaks = trans_breaks("log10", function(x) 10^x), labels = trans_format("log10", math_format(10^.x)))+
+  labs(x = "Month", y = "Daily Detected Calls")+
+  geom_boxplot()+
+  facet_wrap(.~g1)+
+  scale_x_discrete(labels=month.abb) +
+  theme_bw()+
+  theme(axis.text.y = element_text(lineheight = 0.5 , size = 18),
+        axis.text.x = element_text(size = 14, angle= 45, hjust = 1),
+        axis.title.x = element_text(size = 20),
+        axis.title.y = element_text(size = 20),
+        strip.text.x = element_text(size = 20))
+
+png("Annual_Calls_genus.png", width = 10, height = 8, units = 'in', res = 300)
+genus_plot# Make plot
+dev.off()
+
+
+```
+
+```{r}
+
+all_sensors_active<-merge(all_active_df[, c("date", "deployment_id", "inactive_week")], all_sens_info, by = c("date", "deployment_id"))
+
+
+all_sensors_active %>%
+  filter(is.na(inactive_week))%>%
+ggplot(aes(x = month_ch, y = count_gen))+
+  geom_boxplot()+
+   scale_y_continuous(trans = log10_trans(), breaks = trans_breaks("log10", function(x) 10^x), labels = trans_format("log10", math_format(10^.x)))+
+  labs(x = "Month", y = "Daily Detected Calls")+
+  facet_wrap(.~as.factor(g1))+
+  scale_x_discrete(labels=month.abb) +
+  theme_bw()+
+  theme(axis.text.y = element_text(lineheight = 0.5 , size = 18),
+        axis.text.x = element_text(size = 14, angle= 45, hjust = 1),
+        axis.title.x = element_text(size = 20),
+        axis.title.y = element_text(size = 20),
+        strip.text.x = element_text(size = 20))
+
+```
+
+
+
+```{r}
+
+ggplot(all_sens_info, aes(p1, group = c1))+
+  geom_histogram()+
+  #scale_y_continuous(trans = "log1p")+
+  #ylim(0,5000)+
+  facet_wrap(~c1)
+
+
+
+ggplot(all_sens_info, aes(p1, group = c1))+
+  geom_histogram()+
+  #scale_y_log10()+
+  scale_y_continuous(breaks=c(1,10,100,1000,10000,100000, 1000000),trans = "log1p")+
+  #ylim(0,5000)+
+  ylab("Count (log1p)")+
+  xlab("Classification Probability")+
+  facet_wrap(~c1)
+
+
+
+```
+####Figure 8: Distribution of total daily calls for each month, by habitat type.
+
+```{r}
+all_sens_info<-all_sens_info %>%
+  group_by(sensor_id,Habitat, date)%>%
+  mutate(count_hab = n())%>%
+  ungroup()
+
+ggplot(all_sens_info, aes(x = month_ch, y = log10(count_hab)))+
+  geom_boxplot()+
+  facet_wrap(.~Habitat)+
+  labs(x = "Month", y = "Log10 Daily Calls")+
+  scale_x_discrete(labels=month.abb) +
+  theme_bw()+
+  theme(axis.text.y = element_text(lineheight = 0.5 , size = 18),
+        axis.text.x = element_text(size = 14, angle= 45, hjust = 1),
+        axis.title.x = element_text(size = 20),
+        axis.title.y = element_text(size = 20))
+```
+
+####Figure 9: Distribution of total daily calls for each month, by deployment.
+
+```{r}
+all_sens_info<-all_sens_info %>%
+  group_by(deployment_id, date)%>%
+  mutate(count_sens = n())%>%
+  ungroup()
+
+ggplot(all_sens_info, aes(x = month_ch, y = log10(count_sens)))+
+  geom_boxplot()+
+  facet_wrap(.~as.numeric(deployment_id))+
+  labs(x = "Month", y = "Log10 Daily Calls")+
+  scale_x_discrete(labels=month.abb) +
+  theme_bw()+
+  theme(axis.text.y = element_text(lineheight = 0.5 , size = 12),
+        axis.text.x = element_text(size = 12, angle= 45, hjust = 1),
+        axis.title.x = element_text(size = 20),
+        axis.title.y = element_text(size = 20))
+
+```
+
+
+
+```{r,echo = FALSE, eval = FALSE}
+library(suncalc)
+library(lubridate)
+
+QEOP_loc<-cbind(mean(unique(all_sens_info$Lat)), mean(unique(all_sens_info$Lon)))
+
+
+suntimes<-getSunlightTimes(lat = QEOP_loc[1], lon = QEOP_loc[2], date = unique(as.Date(all_sens_info$date)), keep = c("sunrise", "sunset"), tz = "UTC")
+
+suntimes$date<-as.Date(suntimes$date)
+
+suntimes$sunrise<-if_else(suntimes$date < as.Date("2017-10-29") | (suntimes$date > as.Date("2018-03-24") & suntimes$date < as.Date("2018-10-28")), suntimes$sunrise - 3600 , suntimes$sunrise)
+
+suntimes$sunset<-if_else(suntimes$date < as.Date("2017-10-29") | (suntimes$date > as.Date("2018-03-24") & suntimes$date < as.Date("2018-10-28")), suntimes$sunset - 3600 , suntimes$sunset)
+
+
+suntimes$date<-as.Date(suntimes$date)
+all_sens_info$date<-as.Date(all_sens_info$date)
+
+df<-merge(suntimes, all_sens_info, by="date")
+df$sunrise <- strftime(df$sunrise, format="%H:%M:%S")
+df$sunrise <- as.POSIXct(df$sunrise, format="%H:%M:%S")
+
+ggplot(df, aes(x = date, y = sunrise))+
+  #geom_boxplot(aes(fill=Habitat))+ 
+  geom_line()
+
+#df$sunset_diff<-  as.numeric(df$sunset - df$timestamp)
+
+#hist(df$sunset_diff/3600, main = "", xlab = "Hours Since Sunset")
+
+
+```
+
+```{r}
+
+lapply(mlist, logLik)
+
+cv_out <- cv.glm(glmfit = fit_zinbinom1_dep_mon, data = all_sensors_df_cc, K = 10)
+
+
+k_folds <- dismo::kfold(all_sensors_df_cc, k = 4)
+
+for(i in 1:4){
+  
+  train_data = all_sensors_df_cc[k_folds != i,]
+  test_data = all_sensors_df_cc[k_folds == i,]
+  
+  
+  model_update <- glmmTMB(count_hour_dep_rnd ~ mean_temp+ 
+                             mean_wind + precip_total + 
+                             event_bin + (1|deployment_id),   
+                             data =  train_data,
+                             ziformula = ~ month + deployment_id,
+                             dispformula = ~ month + deployment_id,
+                             family = nbinom1)
+  
+  prob <- predict(model_update, newdata=test_data, se.fit=TRUE, zitype="response")
+  outcome <- as.numeric(prob>pcut)
+  
+  test_data$predFE = prob$fit
+  test_data$predFE.min = prob$fit-1.96*prob$se.fit
+  test_data$predFE.max = prob$fit+1.96*prob$se.fit
+  
+  real=ddply(train_data, ~mean_temp+mean_wind+precip_total+event_bin+deployment_id+month, summarize, m=mean(count_hour_dep_rnd))
+
+  
+}
+
+```
+
+
+
+
+
+
+
