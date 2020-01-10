@@ -705,6 +705,7 @@ testDispersion(simulationOutput_hurd2)
 
 ```
 
+
 ###Fitting Models - Negative binomial 1
 ```{r}
 
@@ -874,10 +875,6 @@ testResiduals(simulationOutput_zbin1_dep_mon_both)
 
 ```
 
-
-
-
-
 ###Fitting Models - Negative binomial 2 with deployment as var in dispformula
 ```{r}
 
@@ -983,7 +980,7 @@ plotResiduals(all_sensors_df_cc$mean_temp, simulationOutput_zbin2_disp_mon_both$
 ```{r}
 
 
-AICtab(fit_zinbinom1_dep_mon, fit_zinbinom1, fit_zinbinom1_dep, fit_zinbinom1_mon, fit_zinbinom1_dep_mon_both, fit_zinbinom2, fit_zinbinom2_disp,fit_zinbinom2_mon, fit_zinbinom2_disp_mon, fit_zinbinom2_disp_mon_both )
+AICtab(fit_zinbinom1_dep_mon, fit_zinbinom1, fit_zinbinom1_dep, fit_zinbinom1_mon, fit_zinbinom1_dep_mon_both, fit_zinbinom2, fit_zinbinom2_disp,fit_zinbinom2_mon, fit_zinbinom2_disp_mon, fit_zinbinom2_disp_mon_both)
 
 plotResiduals(all_sensors_df_cc$mean_temp,simulationOutput_zbin1_dep_mon_both$scaledResiduals,quantreg = T)
 
@@ -993,6 +990,7 @@ mlist <- list(fit_zinbinom1_dep_mon, fit_zinbinom1, fit_zinbinom1_dep, fit_zinbi
 ```
 
 ```{r}
+library(plyr)
 
 model = fit_zinbinom1_dep_mon_both 
 
@@ -1030,15 +1028,15 @@ ggplot(ssd, aes(x = mean_count, color = event_bin)) +
 model = fit_zinbinom1
 
 
-fit_zinbinom1_monde <- glmmTMB(count_hour_dep_rnd ~ mean_temp+ 
-                             mean_wind + precip_total + 
-                             event_bin + (1|deployment_id) + (1|month),   
+fit_zinbinom1_monde <- glmmTMB(count_hour_dep_rnd ~ mean_temp+precip_total + 
+                             mean_wind + event_bin + 
+                             (1|deployment_id) + (1|month),   
                              data = all_sensors_df_cc,
                              ziformula= ~1,
                              dispformula = ~1,
                              family=nbinom1)
 
-model = fit_zinbinom1_monde
+model = fit_zinbinom1
 
 all_sensors_df_cc$month_f <- factor(all_sensors_df_cc$month, levels=c('Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'))
 
